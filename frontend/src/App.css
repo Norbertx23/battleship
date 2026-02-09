@@ -1,4 +1,13 @@
+body {
+  margin: 0;
+  background-color: #020617;
+  /* Matches the dark center of the lobby gradient */
+  overflow-x: hidden;
+  /* Prevent horizontal scroll glitches */
+}
+
 .cards {
+
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -135,4 +144,109 @@
   background-color: #5a27ab;
   border-color: #5a27ab;
   box-shadow: 0 0 15px rgba(90, 39, 171, 0.5);
+}
+
+/* Custom Scrollbar for Lobby Lists */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #020617;
+  /* Matches body bg */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #000000;
+  /* Pure black thumb as requested */
+  border-radius: 4px;
+  border: 1px solid #333;
+  /* Subtle border to see it against dark bg */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #1a1a1a;
+}
+
+/* Radio Input / Segmented Control Styles */
+.radio-input {
+  --container_width: 200px;
+  /* Reduced width */
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  /* Smaller radius */
+  background-color: #212121;
+  color: #fff;
+  width: var(--container_width);
+  overflow: hidden;
+  border: 1px solid #414141;
+}
+
+.radio-input input {
+  display: none;
+}
+
+.radio-input label {
+  width: 100%;
+  padding: 6px 0;
+  /* Reduced padding */
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  font-weight: 600;
+  letter-spacing: -1px;
+  font-size: 12px;
+  /* Smaller font */
+}
+
+.selection {
+  display: none;
+  position: absolute;
+  height: 100%;
+  width: calc(var(--container_width) / 6);
+  /* Adjusted for 6 options (0-5) */
+  z-index: 0;
+  left: 0;
+  top: 0;
+  transition: 0.15s ease;
+}
+
+.radio-input label:has(input:checked) {
+  color: #000;
+}
+
+.radio-input label:has(input:checked)~.selection {
+  background-color: #ffe500;
+  display: inline-block;
+  box-shadow: 0 0 10px #ffe500;
+  /* Added glow for cyberpunk feel */
+}
+
+/* Transform calculations for 6 positions based on index (0-5) + 1 for nth-child */
+.radio-input label:nth-child(1):has(input:checked)~.selection {
+  transform: translateX(calc(var(--container_width) * 0 / 6));
+}
+
+.radio-input label:nth-child(2):has(input:checked)~.selection {
+  transform: translateX(calc(var(--container_width) * 1 / 6));
+}
+
+.radio-input label:nth-child(3):has(input:checked)~.selection {
+  transform: translateX(calc(var(--container_width) * 2 / 6));
+}
+
+.radio-input label:nth-child(4):has(input:checked)~.selection {
+  transform: translateX(calc(var(--container_width) * 3 / 6));
+}
+
+.radio-input label:nth-child(5):has(input:checked)~.selection {
+  transform: translateX(calc(var(--container_width) * 4 / 6));
+}
+
+.radio-input label:nth-child(6):has(input:checked)~.selection {
+  transform: translateX(calc(var(--container_width) * 5 / 6));
 }

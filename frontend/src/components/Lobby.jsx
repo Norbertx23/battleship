@@ -4,6 +4,33 @@ import '../App.css';
 
 const socket = io("http://localhost:8000");
 
+const ShipSelector = ({ masts, count, onChange }) => (
+    <div className="flex flex-col gap-1 mb-3">
+        <div className="flex justify-between items-center text-xs text-[#00f2ea]">
+            <span>{masts}-MAST SHIP</span>
+            <span>COUNT: <span className="text-white font-bold">{count}</span></span>
+        </div>
+        <div className="radio-input self-center">
+            {[0, 1, 2, 3, 4, 5].map(val => (
+                <label key={val}>
+                    <input
+                        type="radio"
+                        name={`ship-${masts}`}
+                        value={val}
+                        checked={count === val}
+                        onChange={() => {
+                            console.log(`Config Update: ${masts}-mast ships set to ${val}`);
+                            onChange(masts, val);
+                        }}
+                    />
+                    <span>{val}</span>
+                </label>
+            ))}
+            <span className="selection"></span>
+        </div>
+    </div>
+);
+
 export default function Lobby() {
     const [topPlayers, setTopPlayers] = useState([]);
     const [recentMatches, setRecentMatches] = useState([]);
@@ -13,11 +40,12 @@ export default function Lobby() {
     const [nick, setNick] = useState("Player_" + Math.floor(Math.random() * 1000));
     const [gameCode, setGameCode] = useState("");
     const [roomCode, setRoomCode] = useState("");
+    const [shipConfig, setShipConfig] = useState({ "4": 1, "3": 2, "2": 2, "1": 4 });
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const topRes = await fetch("http://localhost:8000/stats/top-players?limit=5");
+                const topRes = await fetch("http://localhost:8000/stats/top-players?limit=3");
                 setTopPlayers(await topRes.json());
                 const recentRes = await fetch("http://localhost:8000/stats/recent-matches?limit=10");
                 setRecentMatches(await recentRes.json());
@@ -26,10 +54,14 @@ export default function Lobby() {
         fetchData();
 
         socket.on('room_created', (data) => {
+            console.log("Room Created Event Received:", data);
             setRoomCode(data.room_id);
             setView('room_created');
         });
-        socket.on('game_start', () => alert("GAME STARTED"));
+        socket.on('game_start', (data) => {
+            console.log("GAME STARTED! Config:", data.config);
+            alert("GAME STARTED");
+        });
         socket.on('error', (d) => alert(d.message));
 
         return () => { socket.off('room_created'); socket.off('game_start'); socket.off('error'); }
@@ -41,31 +73,37 @@ export default function Lobby() {
     };
 
     const handleAction = () => {
+        console.log("Handle Action Triggered. View:", view);
+        console.log("Socket connected:", socket.connected, "Socket ID:", socket.id);
+
         if (!nick) return alert("IDENTITY REQUIRED");
+
         if (view === 'join') {
             socket.emit('join_room', { room_id: gameCode, nick, config: {} });
-        } else {
-            // Create
-            socket.emit('create_room', { nick, config: { "4": 1, "3": 2, "2": 2, "1": 4 } });
+        }
+        else {
+            console.log("Creating room with ship config:", shipConfig);
+            socket.emit('create_room', { nick, config: shipConfig });
         }
     };
 
+
+
     return (
         <div
-            className="min-h-screen text-[#e5e5e5] p-8 font-mono grid grid-cols-1 lg:grid-cols-2 gap-12"
-            style={{
-                background: "radial-gradient(circle at center, #020617 0%, #1e1b4b 50%, #5a27ab 100%)"
-            }}
+            className="min-h-screen lg:h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse lg:grid lg:grid-cols-2 p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden"
         >
 
-            <div className="flex flex-col gap-8 border-r border-blue-500/30 pr-12">
-                <div className="cyber-panel p-6 rounded relative overflow-hidden">
-                    <h2 className="text-xl font-bold mb-6 text-[#00f2ea] cyber-text-glow flex items-center gap-3">
-                        <span className="text-2xl">⚡</span> TOP_OPERATIVES
+            {/* LEFT COLUMN: Stats */}
+            <div className="flex flex-col gap-4 lg:gap-8 border-t lg:border-t-0 lg:border-r border-blue-500/30 pt-8 lg:pt-0 lg:pr-12 lg:h-full lg:overflow-hidden">
+                {/* Top Players Panel */}
+                <div className="cyber-panel p-4 lg:p-6 rounded relative overflow-hidden flex-shrink-0 lg:max-h-[40%] flex flex-col">
+                    <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#00f2ea] cyber-text-glow flex-shrink-0">
+                        TOP_OPERATIVES
                     </h2>
-                    <ul className="space-y-3">
+                    <ul className="space-y-2 lg:space-y-3 lg:overflow-y-auto pr-2 custom-scrollbar">
                         {topPlayers.map((p, idx) => (
-                            <li key={idx} className="flex justify-between items-center border-b border-[#00f2ea33] pb-2">
+                            <li key={idx} className="flex justify-between items-center border-b border-[#00f2ea33] pb-2 text-sm lg:text-base">
                                 <span className={`font-bold ${idx === 0 ? 'text-[#a855f7]' : 'text-white'}`}>#{idx + 1} {p.nick.toUpperCase()}</span>
                                 <span className="font-mono text-[#00f2ea]">{p.wins} WINS</span>
                             </li>
@@ -73,11 +111,12 @@ export default function Lobby() {
                     </ul>
                 </div>
 
-                <div className="cyber-panel p-6 rounded relative flex-1">
-                    <h2 className="text-xl font-bold mb-6 text-[#a855f7] cyber-text-glow">📊 RECENT_MATCHES</h2>
-                    <div className="overflow-auto max-h-[400px] text-sm">
+                {/* Recent Matches Panel */}
+                <div className="cyber-panel p-4 lg:p-6 rounded relative flex-1 flex flex-col lg:overflow-hidden min-h-[300px] lg:min-h-0">
+                    <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#a855f7] cyber-text-glow flex-shrink-0">RECENT_MATCHES</h2>
+                    <div className="lg:overflow-y-auto flex-1 pr-2 custom-scrollbar text-xs lg:text-sm">
                         <table className="w-full text-left">
-                            <thead className="text-[#00f2ea] border-b border-[#00f2ea33]">
+                            <thead className="text-[#00f2ea] border-b border-[#00f2ea33] sticky top-0 bg-[#000000dd] backdrop-blur-sm z-10">
                                 <tr>
                                     <th className="p-2">VICTOR</th>
                                     <th className="p-2">DEFEATED</th>
@@ -98,30 +137,31 @@ export default function Lobby() {
                 </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center relative">
-                <h1 className="text-7xl font-black mb-24 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter">
+            {/* RIGHT COLUMN: Control Interface */}
+            <div className="flex flex-col items-center justify-center relative py-8 lg:py-0 lg:h-full lg:overflow-y-auto">
+                <h1 className="text-4xl lg:text-7xl font-black mb-8 lg:mb-12 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center">
                     BATTLESHIP_NET
                 </h1>
 
                 {view === 'menu' && (
-                    <div className="cards w-full max-w-md flex flex-col gap-6 items-center">
+                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-4 lg:gap-6 items-center">
                         <div className="card red" onClick={() => setView('create')}>
-                            <p className="tip">CREATE ROOM</p>
-                            <p className="second-text">Start a new battle</p>
+                            <p className="tip text-xl lg:text-3xl">CREATE ROOM</p>
+                            <p className="second-text text-sm lg:text-base">Start a new battle</p>
                         </div>
                         <div className="card blue" onClick={() => setView('join')}>
-                            <p className="tip">JOIN ROOM</p>
-                            <p className="second-text">Enter existing code</p>
+                            <p className="tip text-xl lg:text-3xl">JOIN ROOM</p>
+                            <p className="second-text text-sm lg:text-base">Enter existing code</p>
                         </div>
                         <div className="card green">
-                            <p className="tip">MATCH HISTORY</p>
-                            <p className="second-text">See full records</p>
+                            <p className="tip text-xl lg:text-3xl">MATCH HISTORY</p>
+                            <p className="second-text text-sm lg:text-base">See full records</p>
                         </div>
                     </div>
                 )}
 
                 {(view === 'create' || view === 'join') && (
-                    <div className="w-full max-w-md">
+                    <div className="w-full max-w-xs lg:max-w-md flex flex-col justify-center">
                         <button onClick={handleBack} className="mb-4 text-[#00f2ea] hover:underline flex items-center gap-2">
                             &larr; ABORT SEQUENCE
                         </button>
@@ -132,6 +172,18 @@ export default function Lobby() {
                                     <label htmlFor="nick">CODENAME</label>
                                     <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Enter your identity" />
                                 </div>
+
+                                {view === 'create' && (
+                                    <>
+                                        <div className="border-t border-[#414141] my-2 pt-2">
+                                            <p className="text-[#00f2ea] text-xs font-bold mb-3 tracking-widest text-center">FLEET CONFIGURATION</p>
+                                            <ShipSelector masts="4" count={shipConfig["4"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
+                                            <ShipSelector masts="3" count={shipConfig["3"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
+                                            <ShipSelector masts="2" count={shipConfig["2"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
+                                            <ShipSelector masts="1" count={shipConfig["1"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
+                                        </div>
+                                    </>
+                                )}
 
                                 {view === 'join' && (
                                     <div className="form-group">
