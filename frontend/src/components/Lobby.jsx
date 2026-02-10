@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import '../App.css';
+import { useNavigate } from 'react-router-dom';
+
 
 const socket = io("http://localhost:8000");
 
@@ -32,6 +34,8 @@ const ShipSelector = ({ masts, count, onChange }) => (
 );
 
 export default function Lobby() {
+    const navigate = useNavigate();
+
     const [topPlayers, setTopPlayers] = useState([]);
     const [recentMatches, setRecentMatches] = useState([]);
 
@@ -68,6 +72,9 @@ export default function Lobby() {
     }, []);
 
     const handleBack = () => {
+        if (roomCode) {
+            socket.emit('leave_room', { room_id: roomCode });
+        }
         setView('menu');
         setRoomCode("");
     };
@@ -87,58 +94,58 @@ export default function Lobby() {
         }
     };
 
-
-
     return (
         <div
-            className="min-h-screen lg:h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse lg:grid lg:grid-cols-2 p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden"
+            className={`min-h-screen lg:h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${view === 'match_history' ? 'flex-col' : 'lg:grid lg:grid-cols-2'}`}
         >
 
             {/* LEFT COLUMN: Stats */}
-            <div className="flex flex-col gap-4 lg:gap-8 border-t lg:border-t-0 lg:border-r border-blue-500/30 pt-8 lg:pt-0 lg:pr-12 lg:h-full lg:overflow-hidden">
-                {/* Top Players Panel */}
-                <div className="cyber-panel p-4 lg:p-6 rounded relative overflow-hidden flex-shrink-0 lg:max-h-[40%] flex flex-col">
-                    <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#00f2ea] cyber-text-glow flex-shrink-0">
-                        TOP_OPERATIVES
-                    </h2>
-                    <ul className="space-y-2 lg:space-y-3 lg:overflow-y-auto pr-2 custom-scrollbar">
-                        {topPlayers.map((p, idx) => (
-                            <li key={idx} className="flex justify-between items-center border-b border-[#00f2ea33] pb-2 text-sm lg:text-base">
-                                <span className={`font-bold ${idx === 0 ? 'text-[#a855f7]' : 'text-white'}`}>#{idx + 1} {p.nick.toUpperCase()}</span>
-                                <span className="font-mono text-[#00f2ea]">{p.wins} WINS</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+            {view !== 'match_history' && (
+                <div className="flex flex-col gap-4 lg:gap-8 border-t lg:border-t-0 lg:border-r border-blue-500/30 pt-8 lg:pt-0 lg:pr-12 lg:h-full lg:overflow-hidden">
+                    {/* Top Players Panel */}
+                    <div className="cyber-panel p-4 lg:p-6 rounded relative overflow-hidden flex-shrink-0 lg:max-h-[40%] flex flex-col">
+                        <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#00f2ea] cyber-text-glow flex-shrink-0">
+                            TOP_OPERATIVES
+                        </h2>
+                        <ul className="space-y-2 lg:space-y-3 lg:overflow-y-auto pr-2 custom-scrollbar">
+                            {topPlayers.map((p, idx) => (
+                                <li key={idx} className="flex justify-between items-center border-b border-[#00f2ea33] pb-2 text-sm lg:text-base">
+                                    <span className={`font-bold ${idx === 0 ? 'text-[#a855f7]' : 'text-white'}`}>#{idx + 1} {p.nick.toUpperCase()}</span>
+                                    <span className="font-mono text-[#00f2ea]">{p.wins} WINS</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
 
-                {/* Recent Matches Panel */}
-                <div className="cyber-panel p-4 lg:p-6 rounded relative flex-1 flex flex-col lg:overflow-hidden min-h-[300px] lg:min-h-0">
-                    <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#a855f7] cyber-text-glow flex-shrink-0">RECENT_MATCHES</h2>
-                    <div className="lg:overflow-y-auto flex-1 pr-2 custom-scrollbar text-xs lg:text-sm">
-                        <table className="w-full text-left">
-                            <thead className="text-[#00f2ea] border-b border-[#00f2ea33] sticky top-0 bg-[#000000dd] backdrop-blur-sm z-10">
-                                <tr>
-                                    <th className="p-2">VICTOR</th>
-                                    <th className="p-2">DEFEATED</th>
-                                    <th className="p-2 text-right">DATE</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentMatches.map((m, idx) => (
-                                    <tr key={idx} className="border-b border-[#00f2ea33]">
-                                        <td className="p-2 text-[#39ff14] font-bold drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">{m.winner_nick}</td>
-                                        <td className="p-2 text-red-400">{m.winner_nick === m.player1_nick ? m.player2_nick : m.player1_nick}</td>
-                                        <td className="p-2 text-right text-[#00f2ea]">{new Date(m.played_at).toLocaleDateString()}</td>
+                    {/* Recent Matches Panel */}
+                    <div className="cyber-panel p-4 lg:p-6 rounded relative flex-1 flex flex-col lg:overflow-hidden min-h-[300px] lg:min-h-0">
+                        <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#a855f7] cyber-text-glow flex-shrink-0">RECENT_MATCHES</h2>
+                        <div className="lg:overflow-y-auto flex-1 pr-2 custom-scrollbar text-xs lg:text-sm">
+                            <table className="w-full text-left">
+                                <thead className="text-[#00f2ea] border-b border-[#00f2ea33] sticky top-0 bg-[#000000dd] backdrop-blur-sm z-10">
+                                    <tr>
+                                        <th className="p-2">VICTOR</th>
+                                        <th className="p-2">DEFEATED</th>
+                                        <th className="p-2 text-right">DATE</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {recentMatches.map((m, idx) => (
+                                        <tr key={idx} className="border-b border-[#00f2ea33]">
+                                            <td className="p-2 text-[#39ff14] font-bold drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">{m.winner_nick}</td>
+                                            <td className="p-2 text-red-400">{m.winner_nick === m.player1_nick ? m.player2_nick : m.player1_nick}</td>
+                                            <td className="p-2 text-right text-[#00f2ea]">{new Date(m.played_at).toLocaleDateString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* RIGHT COLUMN: Control Interface */}
-            <div className="flex flex-col items-center justify-center relative py-8 lg:py-0 lg:h-full lg:overflow-y-auto">
+            <div className={`flex flex-col items-center justify-center relative py-8 lg:py-0 lg:h-full lg:overflow-y-auto ${view === 'match_history' ? 'w-full h-full' : ''}`}>
                 <h1 className="text-4xl lg:text-7xl font-black mb-8 lg:mb-12 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center">
                     BATTLESHIP_NET
                 </h1>
@@ -153,7 +160,7 @@ export default function Lobby() {
                             <p className="tip text-xl lg:text-3xl">JOIN ROOM</p>
                             <p className="second-text text-sm lg:text-base">Enter existing code</p>
                         </div>
-                        <div className="card green">
+                        <div className="card green" onClick={() => navigate('/match_history')}>
                             <p className="tip text-xl lg:text-3xl">MATCH HISTORY</p>
                             <p className="second-text text-sm lg:text-base">See full records</p>
                         </div>

@@ -28,6 +28,31 @@ rooms = {}
 async def connect(sid, environ):
     print("connect ", sid)
 
+async def handle_leave(sid, room_id):
+    if room_id in rooms:
+        room_data = rooms[room_id]
+        if sid in room_data['players']:
+            del room_data['players'][sid]
+            print(f"Player {sid} left room {room_id}")
+            
+            if len(room_data['players']) == 0:
+                del rooms[room_id]
+                print(f"Room {room_id} deleted (empty)")
+            else:
+                await sio.emit('player_disconnected', {'message': 'Opponent left the room'}, room=room_id)
+
+@sio.event
+async def leave_room(sid, data):
+    room_id = data.get('room_id')
+    await handle_leave(sid, room_id)
+
+@sio.event
+async def disconnect(sid):
+    print("disconnect ", sid)
+    for room_id, room_data in list(rooms.items()):
+        if sid in room_data['players']:
+             await handle_leave(sid, room_id)
+
 @sio.event
 async def create_room(sid, data):
     room_id = str(uuid.uuid4())[:6].upper()
