@@ -17,8 +17,8 @@ export default function MatchHistory() {
 
     }, []);
 
-    return (<div className="min-h-screen w-full text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start">
-        <h1 className="self-end text-3xl lg:text-5xl font-black mb-4 lg:mb-8 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-right">
+    return (<div className="fixed inset-0 z-50 w-full text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start overflow-hidden">
+    <h1 className="self-end text-3xl lg:text-5xl font-black mb-4 lg:mb-8 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-right">
             BATTLESHIP_NET
         </h1>
         <div className="w-full max-w-4xl h-[80vh] flex flex-col">
