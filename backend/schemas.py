@@ -14,6 +14,10 @@ class TopPlayer(BaseModel):
     nick: str
     wins: int
 
+class MatchListResponse(BaseModel):
+    items: list[MatchResult]
+    total: int
+
 class GameResultCreate(BaseModel):
     player1_nick: str
     player2_nick: str
