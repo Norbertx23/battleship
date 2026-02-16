@@ -83,8 +83,6 @@ Frontend to warstwa wizualna, w której grasz.
 
 *   `/backend` - Logika serwera (FastAPI, Socket.IO, Baza danych).
 *   `/frontend` - Interfejs użytkownika (React, Tailwind CSS).
-*   `MATCH_HISTORY_TUTORIAL.md` - Poradnik implementacji historii meczów.
-*   `tailwind.md` - Ściąga z klas CSS.
 
 ---
 
