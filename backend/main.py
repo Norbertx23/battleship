@@ -90,10 +90,28 @@ def get_db():
 def read_root():
     return {"message": "Battleship API"}
 
-@fastapi_app.get("/stats/recent-matches", response_model=list[schemas.MatchResult])
-def get_recent_matches(page: int = 1, limit: int = 5, db: Session = Depends(get_db)):
+from sqlalchemy import or_
+
+@fastapi_app.get("/stats/recent-matches", response_model=schemas.MatchListResponse)
+def get_recent_matches(page: int = 1, limit: int = 5, search: str = "", db: Session = Depends(get_db)):
     skip = (page - 1) * limit
-    return db.query(models.MatchHistory).order_by(models.MatchHistory.played_at.desc()).offset(skip).limit(limit).all()
+    
+    query = db.query(models.MatchHistory)
+    
+    if search:
+        search_fmt = f"%{search}%"
+        query = query.filter(
+            or_(
+                models.MatchHistory.winner_nick.ilike(search_fmt),
+                models.MatchHistory.player1_nick.ilike(search_fmt),
+                models.MatchHistory.player2_nick.ilike(search_fmt)
+            )
+        )
+    
+    total = query.count()
+    items = query.order_by(models.MatchHistory.played_at.desc()).offset(skip).limit(limit).all()
+    
+    return {"items": items, "total": total}
 
 @fastapi_app.post("/game/save", status_code=201)
 def save_game_result(game_data: schemas.GameResultCreate, db: Session = Depends(get_db)):
