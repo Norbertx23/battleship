@@ -85,5 +85,3 @@ Frontend to warstwa wizualna, w której grasz.
 *   `/frontend` - Interfejs użytkownika (React, Tailwind CSS).
 
 ---
-
-*Battleship_NET © 2026*
