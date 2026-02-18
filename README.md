@@ -31,7 +31,7 @@ Backend zarządza logiką gry, pokojami i komunikacją między graczami.
     venv\Scripts\activate
     
     # Aktywacja (Mac/Linux):
-    source venv/bin/activate
+    source .venv/bin/activate
     ```
 
 3.  Zainstaluj wymagane biblioteki:
