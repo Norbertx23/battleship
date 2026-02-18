@@ -1,4 +1,4 @@
-import uuid
+import random
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +8,9 @@ import models, schemas
 from database import engine, SessionLocal
 import socketio
 import uuid
+from sqlalchemy import or_
+import game_manager as gm
+
 
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 fastapi_app = FastAPI()
@@ -58,10 +61,13 @@ async def create_room(sid, data):
     room_id = str(uuid.uuid4())[:6].upper()
 
     rooms[room_id] = {
-        'host_sid' : sid,
-        'players' : {sid : data['nick']},
-        'config' : {sid : data['config']},
-        'status' : 'waiting'
+        'host': sid,
+        'players': {sid: data['nick']},
+        'config': data['config'],
+        'status': 'waiting',
+        'boards': {},
+        'shots': {sid: []},
+        'ready': []
     }
     await sio.enter_room(sid, room_id)
     await sio.emit('room_created', {'room_id' : room_id}, to=sid)
@@ -86,11 +92,92 @@ def get_db():
     finally:
         db.close()
 
+
+@sio.event
+async def place_ships(sid, data):
+    room_id = data['room_id']
+    ships = data['ships']
+
+    if room_id in rooms:
+        room = rooms[room_id]
+
+        if not gm.validate_ships(ships):
+            await sio.emit('error', {'message': 'Invalid ship placement!'}, to=sid)
+            return
+
+        room['boards'][sid] = ships
+
+        if sid not in room['ready']:
+            room['ready'].append(sid)
+
+        if len(room['ready']) == 2:
+            room['status'] = 'playing'
+            first_turn = random.choice(list(room['players'].keys()))
+            room['turn'] = first_turn
+            await sio.emit('battle_start', {'turn': first_turn}, room=room_id)
+
+
+def save_match_to_db(winner_nick, player1_nick, player2_nick):
+    db = SessionLocal()
+    try:
+        new_match = models.MatchHistory(
+            player1_nick=player1_nick,
+            player2_nick=player2_nick,
+            winner_nick=winner_nick
+        )
+        db.add(new_match)
+        db.commit()
+        print(f"Match saved: {winner_nick} won against {player2_nick if winner_nick == player1_nick else player1_nick}")
+    except Exception as e:
+        print(f"Error saving match: {e}")
+    finally:
+        db.close()
+
+@sio.event
+async def fire_shot(sid, data):
+    room_id = data['room_id']
+    x,y = data['x'], data['y']
+    if room_id in rooms:
+        room = rooms[room_id]
+
+        if room['turn'] != sid:
+            return
+
+        opponent_sid = [p for p in room['players'] if p != sid][0]
+        opponent_ships = room['boards'].get(opponent_sid, [])
+
+        result = gm.check_hit(opponent_ships,x, y)
+
+        room['shots'][sid].append({'x': x, 'y': y, 'result': result})
+
+        if result == 'hit':
+             if gm.check_win(opponent_ships, room['shots'][sid]):
+                 await sio.emit('game_over', {'winner': sid}, room=room_id)
+                 room['status'] = 'finished'
+                 
+                 # Save game result
+                 p1_sid = list(room['players'].keys())[0]
+                 p2_sid = list(room['players'].keys())[1]
+                 winner_nick = room['players'][sid]
+                 p1_nick = room['players'][p1_sid]
+                 p2_nick = room['players'][p2_sid]
+                 
+                 save_match_to_db(winner_nick, p1_nick, p2_nick)
+                 return
+
+        next_turn = sid if result == 'hit' else opponent_sid
+        room['turn'] = next_turn
+
+        await sio.emit('shot_result', {
+            'x': x, 'y': y,
+            'result': result,
+            'shooter': sid,
+            'next_turn': next_turn
+        }, room=room_id)
 @fastapi_app.get("/")
 def read_root():
     return {"message": "Battleship API"}
 
-from sqlalchemy import or_
 
 @fastapi_app.get("/stats/recent-matches", response_model=schemas.MatchListResponse)
 def get_recent_matches(page: int = 1, limit: int = 5, search: str = "", db: Session = Depends(get_db)):
@@ -113,17 +200,7 @@ def get_recent_matches(page: int = 1, limit: int = 5, search: str = "", db: Sess
     
     return {"items": items, "total": total}
 
-@fastapi_app.post("/game/save", status_code=201)
-def save_game_result(game_data: schemas.GameResultCreate, db: Session = Depends(get_db)):
-    new_match = models.MatchHistory(
-        player1_nick=game_data.player1_nick,
-        player2_nick=game_data.player2_nick,
-        winner_nick=game_data.winner_nick
-    )
-    db.add(new_match)
-    db.commit()
-    db.refresh(new_match)
-    return {"message": "Game saved", "id": new_match.id}
+
 
 @fastapi_app.get("/stats/top-players", response_model=list[schemas.TopPlayer])
 def get_top_players(limit: int = 10, db: Session = Depends(get_db)):

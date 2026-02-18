@@ -43,7 +43,7 @@ export default function MatchHistory() {
             BATTLESHIP_NET
         </h1>
 
-        <div className="w-full max-w-4xl h-[80vh] flex flex-col">
+        <div className="w-full max-w-4xl h-[90vh] flex flex-col">
             <button
                 onClick={() => navigate('/')}
                 className="mb-4 text-[#00f2ea] hover:underline flex items-center gap-2 self-start"

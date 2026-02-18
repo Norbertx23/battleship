@@ -43,6 +43,9 @@ Backend zarządza logiką gry, pokojami i komunikacją między graczami.
     ```bash
     uvicorn main:app --reload
     ```
+    ```bash
+    cd backend; uvicorn main:app --reload
+    ```
     ✅ Serwer wystartuje pod adresem: `http://127.0.0.1:8000`
 
 ---
