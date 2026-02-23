@@ -19,7 +19,7 @@ export default function MatchHistory() {
             setLoading(true);
         }, 400);
 
-        fetch(`http://192.168.20.228:8000/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
+        fetch(`http://192.168.1.20:8000/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
             .then(response => response.json())
             .then(data => {
                 clearTimeout(timer);
@@ -37,19 +37,19 @@ export default function MatchHistory() {
 
         return () => clearTimeout(timer);
     }, [page, search]);
-
-    return (<div className="fixed inset-0 z-50 w-full text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start overflow-hidden">
-        <h1 className="self-end text-3xl lg:text-5xl font-black mb-4 lg:mb-8 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-right">
-            BATTLESHIP_NET
-        </h1>
-
-        <div className="w-full max-w-4xl h-[90vh] flex flex-col">
-            <button
-                onClick={() => navigate('/')}
-                className="mb-4 text-[#00f2ea] hover:underline flex items-center gap-2 self-start"
-            >
-                ← BACK TO MENU
-            </button>
+    return (<div className="fixed inset-0 z-50 w-full min-h-[100dvh] text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start overflow-hidden">
+        <div className="w-full flex-1 max-w-4xl flex flex-col pt-4 pb-8">
+            <div className="flex justify-between items-end mb-4 md:mb-8 text-right w-full">
+                <button
+                    onClick={() => navigate('/')}
+                    className="text-[#00f2ea] hover:underline flex items-center gap-2 self-start"
+                >
+                    ← BACK TO MENU
+                </button>
+                <h1 className="text-3xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter">
+                    BATTLESHIP_NET
+                </h1>
+            </div>
 
             <input
                 type="text"

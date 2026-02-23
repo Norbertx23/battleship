@@ -13,6 +13,8 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     const [isMyTurn, setIsMyTurn] = useState(false);
     const [result, setResult] = useState(null); // 'VICTORY' or 'DEFEAT'
     const [enemySunkShips, setEnemySunkShips] = useState([]);
+    const [sunkMessage, setSunkMessage] = useState(null);
+    const [isMarkMode, setIsMarkMode] = useState(false);
 
     // Placement State
     const [draggedShip, setDraggedShip] = useState(null);
@@ -27,6 +29,8 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     const myShipsRef = useRef(myShips);
     const globalRotationRef = useRef(globalRotation);
     const phaseRef = useRef(phase);
+    const dragPointerIdRef = useRef(null);
+    const dragPointerTypeRef = useRef(null);
 
     useEffect(() => { draggedShipRef.current = draggedShip; }, [draggedShip]);
     useEffect(() => { dragOverIndexRef.current = dragOverIndex; }, [dragOverIndex]);
@@ -108,6 +112,11 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
         setMyShips(prev => prev.map(s => s.id === ship.id ? { ...s, rotation: newRotation } : s));
     };
 
+    // --- EFFECTS ---
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [phase]);
+
     // --- SOCKET LISTENERS ---
     useEffect(() => {
         socket.on('battle_start', (data) => {
@@ -119,7 +128,15 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
             const index = y * BOARD_SIZE + x;
             if (shooter === socket.id) {
                 setEnemyBoard(prev => { const newBoard = [...prev]; newBoard[index] = result; return newBoard; });
-                if (result === 'hit' && data.sunk_sizes) setEnemySunkShips(data.sunk_sizes);
+                if (result === 'hit' && data.sunk_sizes) {
+                    setEnemySunkShips(prev => {
+                        if (data.sunk_sizes.length > prev.length) {
+                            setSunkMessage("ENEMY SHIP DESTROYED!");
+                            setTimeout(() => setSunkMessage(null), 3000);
+                        }
+                        return data.sunk_sizes;
+                    });
+                }
             } else {
                 setMyBoard(prev => { const newBoard = [...prev]; newBoard[index] = result; return newBoard; });
             }
@@ -195,6 +212,8 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
         const initialRotation = source === 'board' ? ship.rotation : globalRotationRef.current;
         setDraggedShip({ ...ship, source, rotation: initialRotation });
         setSelectedShipId(null);
+        dragPointerIdRef.current = e.pointerId;
+        dragPointerTypeRef.current = e.pointerType;
 
         if (source === 'board') {
             setDragOverIndex(ship.y * BOARD_SIZE + ship.x);
@@ -203,13 +222,39 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
         }
     };
 
-    const handlePointerEnter = (index) => {
+    const handlePointerEnter = (e, index) => {
+        if (e.pointerType !== 'mouse' && !e.isPrimary) return;
+        if (dragPointerTypeRef.current !== null && e.pointerType !== dragPointerTypeRef.current) return;
+
+        if (dragPointerIdRef.current !== null && e.pointerId !== dragPointerIdRef.current) {
+            return;
+        }
         if (draggedShipRef.current) {
             setDragOverIndex(index);
         }
     };
 
-    const handlePointerUp = (index) => {
+    const handleGridPointerLeave = (e) => {
+        if (e.pointerType !== 'mouse' && !e.isPrimary) return;
+        if (dragPointerTypeRef.current !== null && e.pointerType !== dragPointerTypeRef.current) return;
+        if (dragPointerIdRef.current !== null && e.pointerId !== dragPointerIdRef.current) return;
+        if (draggedShipRef.current) setDragOverIndex(null);
+    };
+
+    const handlePointerUp = (e, index) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.pointerType !== 'mouse' && !e.isPrimary) return;
+            if (dragPointerTypeRef.current !== null && e.pointerType !== dragPointerTypeRef.current) return;
+
+            // Ignore pointer lifts from fingers that didn't start the drag
+            if (dragPointerIdRef.current !== null && e.pointerId !== dragPointerIdRef.current) {
+                return;
+            }
+        }
+
         if (phase !== 'placement' || !draggedShipRef.current) {
             // If they clicked on a placed ship quickly but didn't drag it anywhere, select it
             if (!draggedShipRef.current && phase === 'placement') {
@@ -237,6 +282,8 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
 
         setDraggedShip(null);
         setDragOverIndex(null);
+        dragPointerIdRef.current = null;
+        dragPointerTypeRef.current = null;
     };
 
     const handleContextMenu = (e) => {
@@ -281,16 +328,23 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
         setPhase('waiting');
     };
 
-    const handleFire = (index) => {
-        if (phase !== 'battle' || !isMyTurn || (enemyBoard[index] === 'hit' || enemyBoard[index] === 'miss')) return;
-        const x = index % BOARD_SIZE;
-        const y = Math.floor(index / BOARD_SIZE);
-        socket.emit('fire_shot', { room_id: roomCode, x, y });
+    const handleFireOrMark = (e, index) => {
+        if (phase !== 'battle') return;
+
+        if (isMarkMode) {
+            handleMarkRadar(e, index);
+        } else {
+            if (!isMyTurn) return;
+            if (enemyBoard[index] === 'hit' || enemyBoard[index] === 'miss') return;
+            const x = index % BOARD_SIZE;
+            const y = Math.floor(index / BOARD_SIZE);
+            socket.emit('fire_shot', { room_id: roomCode, x, y });
+        }
     };
 
     // --- RENDER ---
     return (
-        <div className="flex flex-col items-center gap-8 w-full max-w-6xl relative">
+        <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl relative">
             {/* Top Area */}
             <div className="absolute top-0 left-0 w-full flex justify-between items-start px-4">
                 <button
@@ -307,27 +361,39 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                 )}
             </div>
 
-            <h1 className="text-3xl md:text-4xl cyber-text-glow font-bold text-[#00f2ea] mt-12 md:mt-8 text-center px-2">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold text-[#00f2ea] mt-10 md:mt-6 lg:mt-2 text-center px-2">
                 {phase === 'placement' && "DEPLOY YOUR FLEET"}
                 {phase === 'waiting' && "WAITING FOR OPPONENT..."}
                 {phase === 'battle' && (isMyTurn ? "YOUR TURN - FIRE!" : "ENEMY TURN - EVADE!")}
                 {phase === 'game_over' && result}
             </h1>
 
-            <div className="flex flex-col lg:flex-row gap-8 w-full justify-center items-center lg:items-start" onContextMenu={handleContextMenu}>
+            {sunkMessage && (
+                <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] bg-red-600/90 border-2 border-red-500 text-white font-black text-xl md:text-3xl px-8 py-4 shadow-[0_0_40px_red] animate-pulse whitespace-nowrap pointer-events-none text-shadow-lg">
+                    {sunkMessage}
+                </div>
+            )}
+
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 w-full justify-center items-center lg:items-start" onContextMenu={handleContextMenu}>
                 {/* MY BOARD */}
                 <div className="cyber-panel p-4 flex flex-col items-center">
                     <h2 className="text-[#39ff14] mb-2 font-bold">MY FLEET</h2>
                     <div
-                        className="grid grid-cols-10 grid-rows-10 gap-1 w-[85vw] max-w-[300px] h-[85vw] max-h-[300px] md:max-w-none md:max-h-none md:w-[400px] md:h-[400px] relative mx-auto"
-                        onPointerLeave={() => { if (draggedShip) setDragOverIndex(null); }}
+                        className="grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:w-[360px] lg:h-[360px] relative mx-auto"
+                        onPointerLeave={handleGridPointerLeave}
+                        style={{
+                            touchAction: phase === 'placement' ? 'none' : 'auto',
+                            WebkitTouchCallout: phase === 'placement' ? 'none' : 'auto',
+                            WebkitUserSelect: phase === 'placement' ? 'none' : 'auto',
+                            userSelect: phase === 'placement' ? 'none' : 'auto'
+                        }}
                     >
                         {/* Render Drop Zones / Grid */}
                         {myBoard.map((cell, i) => (
                             <div
                                 key={`cell-${i}`}
-                                onPointerEnter={() => phase === 'placement' ? handlePointerEnter(i) : null}
-                                onPointerUp={() => phase === 'placement' ? handlePointerUp(i) : null}
+                                onPointerEnter={(e) => phase === 'placement' ? handlePointerEnter(e, i) : null}
+                                onPointerUp={(e) => phase === 'placement' ? handlePointerUp(e, i) : null}
                                 className={`
                                     border border-[#39ff1433] flex items-center justify-center text-xs overflow-hidden
                                     bg-[#00000055]
@@ -388,7 +454,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                                     key={`placed-${id}`}
                                     onPointerDown={(e) => phase === 'placement' ? handlePointerDown(e, ship, 'board') : null}
                                     className={`
-                                        absolute shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-all duration-200
+                                        absolute shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-all duration-200 select-none
                                         ${!isValid ? 'bg-red-500 animate-pulse border-2 border-red-900 shadow-[0_0_15px_red] z-20'
                                             : (isSelected ? 'bg-[#ff9900] z-10 shadow-[0_0_15px_#ff9900]' : 'bg-[#39ff14]')}
                                         ${phase === 'placement' ? 'cursor-pointer hover:brightness-125' : ''}
@@ -401,7 +467,10 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                                         top: `calc(${top}% + 2px)`,
                                         transform: `rotate(${rotation}deg) scale(${isSelected ? 1.05 : 1})`,
                                         transformOrigin: `${50 / size}% 50%`,
-                                        touchAction: 'none'
+                                        touchAction: 'none',
+                                        WebkitTouchCallout: 'none',
+                                        WebkitUserSelect: 'none',
+                                        userSelect: 'none'
                                     }}
                                 >
                                     {/* Render Hits directly on the ship */}
@@ -436,44 +505,18 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                             );
                         })}
                     </div>
-
-                    {/* ENEMY FLEET TRACKER (MOVED HERE) */}
-                    {phase !== 'placement' && phase !== 'waiting' && (
-                        <div className="cyber-panel p-4 flex flex-col items-center mt-4">
-                            <h2 className="text-[#ff9900] mb-2 font-bold text-sm tracking-widest">ENEMY FLEET</h2>
-                            <div className="flex flex-wrap gap-4 justify-center">
-                                {shipCategories.map(({ size, maxCount }) => {
-                                    const sunkCount = enemySunkShips.filter(s => s === size).length;
-                                    const aliveCount = maxCount - sunkCount;
-
-                                    return (
-                                        <div key={`enemy-ship-${size}`} className="flex flex-col items-center">
-                                            <div className={`flex gap-[2px] mb-1 transition-all ${aliveCount <= 0 ? 'opacity-30 scale-90' : ''}`}>
-                                                {Array.from({ length: size }).map((_, i) => (
-                                                    <div key={i} className={`w-3 h-3 md:w-4 md:h-4 border border-black ${aliveCount > 0 ? 'bg-gray-500' : 'bg-red-600 shadow-[0_0_5px_red]'}`} />
-                                                ))}
-                                            </div>
-                                            <span className={`text-xs font-bold font-mono transition-all ${aliveCount > 0 ? 'text-gray-400' : 'text-red-500 line-through decoration-[2px] opacity-70'}`}>
-                                                x{aliveCount}
-                                            </span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* ENEMY BOARD */}
                 {phase !== 'placement' && phase !== 'waiting' && (
-                    <div className="flex flex-col gap-4">
-                        <div className="cyber-panel p-4">
+                    <div className="flex flex-col lg:flex-row gap-4">
+                        <div className="cyber-panel p-4 flex flex-col items-center">
                             <h2 className="text-red-500 mb-2 font-bold">RADAR (Right-Click to Mark)</h2>
-                            <div className="grid grid-cols-10 grid-rows-10 gap-1 w-[85vw] max-w-[300px] h-[85vw] max-h-[300px] md:max-w-none md:max-h-none md:w-[400px] md:h-[400px] mx-auto">
+                            <div className="grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:w-[360px] lg:h-[360px] mx-auto">
                                 {enemyBoard.map((cell, i) => (
                                     <div
                                         key={i}
-                                        onClick={() => handleFire(i)}
+                                        onClick={(e) => handleFireOrMark(e, i)}
                                         onContextMenu={(e) => handleMarkRadar(e, i)}
                                         className={`
                                              border border-[#ff000033] flex items-center justify-center cursor-crosshair text-xs overflow-hidden transition-all
@@ -487,6 +530,41 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                                         {cell === 'miss' && 'o'}
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* MARK MODE TOGGLE (MOBILE) */}
+                            <button
+                                onClick={() => setIsMarkMode(!isMarkMode)}
+                                className={`mt-4 w-full py-2 border rounded font-bold text-xs tracking-widest transition-colors ${isMarkMode
+                                    ? 'bg-[#eab308] text-black border-[#eab308] shadow-[0_0_10px_#eab308]'
+                                    : 'bg-transparent text-gray-400 border-gray-600 hover:text-white hover:border-gray-400'
+                                    }`}
+                            >
+                                {isMarkMode ? 'MARK MODE: ON (TAP TO MARK)' : 'MARK MODE: OFF (TAP TO FIRE)'}
+                            </button>
+                        </div>
+
+                        {/* ENEMY FLEET TRACKER */}
+                        <div className="cyber-panel p-4 flex flex-col items-center lg:min-w-[130px]">
+                            <h2 className="text-[#ff9900] mb-4 font-bold text-sm tracking-widest text-center">ENEMY<br />FLEET</h2>
+                            <div className="flex flex-row lg:flex-col gap-4 justify-center items-center flex-wrap">
+                                {shipCategories.map(({ size, maxCount }) => {
+                                    const sunkCount = enemySunkShips.filter(s => s === size).length;
+                                    const aliveCount = maxCount - sunkCount;
+
+                                    return (
+                                        <div key={`enemy-ship-${size}`} className="flex flex-col items-center justify-center">
+                                            <div className={`flex gap-[2px] mb-1 transition-all ${aliveCount <= 0 ? 'opacity-30 scale-90' : ''}`}>
+                                                {Array.from({ length: size }).map((_, i) => (
+                                                    <div key={i} className={`w-3 h-3 md:w-4 md:h-4 border border-black ${aliveCount > 0 ? 'bg-gray-500' : 'bg-red-600 shadow-[0_0_5px_red]'}`} />
+                                                ))}
+                                            </div>
+                                            <span className={`text-xs font-bold font-mono transition-all ${aliveCount > 0 ? 'text-gray-400' : 'text-red-500 line-through decoration-[2px] opacity-70'}`}>
+                                                x{aliveCount}
+                                            </span>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>
@@ -513,7 +591,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                                                     }
                                                 }}
                                                 className={`
-                                                    shadow-[0_0_8px_#00f2ea] flex transition-transform
+                                                    shadow-[0_0_8px_#00f2ea] flex transition-transform select-none
                                                     ${isAvailable ? 'bg-[#00f2ea] cursor-grab active:cursor-grabbing hover:scale-105' : 'bg-gray-600 grayscale opacity-50 cursor-not-allowed'}
                                                 `}
                                                 style={{
@@ -526,7 +604,10 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                                                         transparent 23px,
                                                         transparent 25px
                                                     )`,
-                                                    touchAction: 'none'
+                                                    touchAction: 'none',
+                                                    WebkitTouchCallout: 'none',
+                                                    WebkitUserSelect: 'none',
+                                                    userSelect: 'none'
                                                 }}
                                             />
                                             <span className={`text-sm font-bold font-mono ${isAvailable ? 'text-white' : 'text-gray-500'}`}>x{leftCount}</span>
