@@ -19,7 +19,7 @@ export default function MatchHistory() {
             setLoading(true);
         }, 400);
 
-        fetch(`http://localhost:8000/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
+        fetch(`http://192.168.20.228:8000/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
             .then(response => response.json())
             .then(data => {
                 clearTimeout(timer);
@@ -94,8 +94,8 @@ export default function MatchHistory() {
                                         <td className="p-[0.5vh] md:px-[2vh] text-[#39ff14] font-bold font-mono truncate">{item.winner_nick}</td>
                                         <td className="p-[0.5vh] md:px-[2vh] text-red-400 font-mono truncate">{item.winner_nick === item.player1_nick ? item.player2_nick : item.player1_nick}</td>
                                         <td className="p-[0.5vh] md:px-[2vh] text-[#00f2ea] text-right opacity-80 whitespace-nowrap">
-                                            <span className="md:hidden">{new Date(item.played_at).toLocaleDateString()}</span>
-                                            <span className="hidden md:inline">{new Date(item.played_at).toLocaleString()}</span>
+                                            <span className="md:hidden">{new Date(item.played_at + 'Z').toLocaleDateString()}</span>
+                                            <span className="hidden md:inline">{new Date(item.played_at + 'Z').toLocaleString()}</span>
                                         </td>
                                     </tr>
                                 ))}

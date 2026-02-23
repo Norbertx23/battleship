@@ -35,14 +35,29 @@ async def handle_leave(sid, room_id):
     if room_id in rooms:
         room_data = rooms[room_id]
         if sid in room_data['players']:
+            leaving_nick = room_data['players'][sid]
             del room_data['players'][sid]
-            print(f"Player {sid} left room {room_id}")
+            print(f"Player {sid} ({leaving_nick}) left room {room_id}")
             
             if len(room_data['players']) == 0:
                 del rooms[room_id]
                 print(f"Room {room_id} deleted (empty)")
             else:
-                await sio.emit('player_disconnected', {'message': 'Opponent left the room'}, room=room_id)
+                remaining_sid = list(room_data['players'].keys())[0]
+                remaining_nick = room_data['players'][remaining_sid]
+                
+                current_status = room_data.get('status')
+                has_placed_ships = len(room_data.get('ready', [])) > 0
+                
+                if current_status == 'finished':
+                    await sio.emit('player_disconnected', {'message': '', 'silent': True}, room=room_id)
+                elif current_status == 'playing' or (current_status == 'waiting' and has_placed_ships):
+                    room_data['status'] = 'finished'
+                    save_match_to_db(remaining_nick, leaving_nick, remaining_nick)
+                    await sio.emit('game_over', {'winner': remaining_sid}, room=room_id)
+                    await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
+                else:
+                    await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} left the room.'}, room=room_id)
 
 @sio.event
 async def leave_room(sid, data):
@@ -78,9 +93,12 @@ async def join_room(sid, data):
     room_id = data['room_id']
     if room_id in rooms and len(rooms[room_id]['players']) < 2:
         rooms[room_id]['players'][sid] = data['nick']
+        if 'shots' not in rooms[room_id]:
+            rooms[room_id]['shots'] = {}
+        rooms[room_id]['shots'][sid] = []
         await sio.enter_room(sid, room_id)
 
-        await sio.emit('game_start', {'config' : data['config'], 'players' : list(rooms[room_id]['players'].values())}, room=room_id)
+        await sio.emit('game_start', {'config' : rooms[room_id]['config'], 'players' : list(rooms[room_id]['players'].values())}, room=room_id)
         print(f"{sid} dołączył do {room_id}")
 
     else:
@@ -102,6 +120,7 @@ async def place_ships(sid, data):
         room = rooms[room_id]
 
         if not gm.validate_ships(ships):
+            print(f"Validation failed for {sid} with ships: {ships}")
             await sio.emit('error', {'message': 'Invalid ship placement!'}, to=sid)
             return
 
@@ -135,6 +154,8 @@ def save_match_to_db(winner_nick, player1_nick, player2_nick):
 
 @sio.event
 async def fire_shot(sid, data):
+    print(f"SHOT FIRED by {sid}: {data}")
+
     room_id = data['room_id']
     x,y = data['x'], data['y']
     if room_id in rooms:
@@ -150,6 +171,22 @@ async def fire_shot(sid, data):
 
         room['shots'][sid].append({'x': x, 'y': y, 'result': result})
 
+        next_turn = sid if result == 'hit' else opponent_sid
+        room['turn'] = next_turn
+
+        sunk_sizes = []
+        if result == 'hit':
+             sunk_ships = gm.get_sunk_ships(opponent_ships, room['shots'][sid])
+             sunk_sizes = [s['size'] for s in sunk_ships]
+
+        await sio.emit('shot_result', {
+            'x': x, 'y': y,
+            'result': result,
+            'sunk_sizes': sunk_sizes,
+            'shooter': sid,
+            'next_turn': next_turn
+        }, room=room_id)
+
         if result == 'hit':
              if gm.check_win(opponent_ships, room['shots'][sid]):
                  await sio.emit('game_over', {'winner': sid}, room=room_id)
@@ -164,16 +201,6 @@ async def fire_shot(sid, data):
                  
                  save_match_to_db(winner_nick, p1_nick, p2_nick)
                  return
-
-        next_turn = sid if result == 'hit' else opponent_sid
-        room['turn'] = next_turn
-
-        await sio.emit('shot_result', {
-            'x': x, 'y': y,
-            'result': result,
-            'shooter': sid,
-            'next_turn': next_turn
-        }, room=room_id)
 @fastapi_app.get("/")
 def read_root():
     return {"message": "Battleship API"}

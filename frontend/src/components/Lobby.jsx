@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
+import GameBoard from './GameBoard';
 
-
-const socket = io("http://localhost:8000");
+const socket = io("http://192.168.20.228:8000");
 
 const ShipSelector = ({ masts, count, onChange }) => (
     <div className="flex flex-col gap-1 mb-3">
@@ -45,17 +45,23 @@ export default function Lobby() {
     const [roomCode, setRoomCode] = useState("");
     const [shipConfig, setShipConfig] = useState({ "4": 1, "3": 2, "2": 2, "1": 4 });
 
+    const fetchData = async () => {
+        try {
+            const topRes = await fetch("http://192.168.20.228:8000/stats/top-players?limit=3");
+            setTopPlayers(await topRes.json());
+            const recentRes = await fetch("http://192.168.20.228:8000/stats/recent-matches?limit=10");
+            const recentData = await recentRes.json();
+            setRecentMatches(recentData.items || []);
+        } catch (err) { console.error(err); }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const topRes = await fetch("http://localhost:8000/stats/top-players?limit=3");
-                setTopPlayers(await topRes.json());
-                const recentRes = await fetch("http://localhost:8000/stats/recent-matches?limit=10");
-                const recentData = await recentRes.json();
-                setRecentMatches(recentData.items || []);
-            } catch (err) { console.error(err); }
-        };
-        fetchData();
+        if (view === 'menu') {
+            fetchData();
+        }
+    }, [view]);
+
+    useEffect(() => {
 
         socket.on('room_created', (data) => {
             console.log("Room Created Event Received:", data);
@@ -64,7 +70,8 @@ export default function Lobby() {
         });
         socket.on('game_start', (data) => {
             console.log("GAME STARTED! Config:", data.config);
-            alert("GAME STARTED");
+            setShipConfig(data.config);
+            setView('game');
         });
         socket.on('error', (d) => alert(d.message));
 
@@ -96,12 +103,12 @@ export default function Lobby() {
 
     return (
         <div
-            className={`min-h-screen lg:h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 pb-20 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${view === 'match_history' ? 'flex-col' : 'lg:grid lg:grid-cols-2'}`}
+            className={`min-h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
         >
 
             {/* LEFT COLUMN: Stats */}
-            {view !== 'match_history' && (
-                <div className="flex flex-col justify-center gap-4 lg:gap-8 border-t lg:border-t-0 lg:border-r border-blue-500/30 pt-8 lg:pt-0 lg:pr-12 lg:h-full lg:overflow-hidden">
+            {view !== 'match_history' && view !== 'game' && (
+                <div className="flex flex-col justify-center gap-4 lg:gap-8 border-t lg:border-t-0 lg:border-r border-blue-500/30 pt-8 lg:pt-0 lg:pr-12 lg:min-h-0 lg:h-full overflow-hidden">
                     {/* Top Players Panel */}
                     <div className="cyber-panel p-4 lg:p-6 rounded relative overflow-hidden flex-shrink-0 lg:max-h-[40%] flex flex-col">
                         <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#00f2ea] cyber-text-glow flex-shrink-0">
@@ -137,8 +144,8 @@ export default function Lobby() {
                                             <td className="p-2 text-[#39ff14] font-bold drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">{m.winner_nick}</td>
                                             <td className="p-2 text-red-400">{m.winner_nick === m.player1_nick ? m.player2_nick : m.player1_nick}</td>
                                             <td className="p-2 text-right text-[#00f2ea]">
-                                                <span className="md:hidden">{new Date(m.played_at).toLocaleDateString()}</span>
-                                                <span className="hidden md:inline">{new Date(m.played_at).toLocaleString()}</span>
+                                                <span className="md:hidden">{new Date(m.played_at + 'Z').toLocaleDateString()}</span>
+                                                <span className="hidden md:inline">{new Date(m.played_at + 'Z').toLocaleString()}</span>
                                             </td>
                                         </tr>
                                     ))}
@@ -149,9 +156,9 @@ export default function Lobby() {
                 </div>
             )}
 
-            {/* RIGHT COLUMN: Control Interface */}
-            <div className={`flex flex-col items-center justify-center relative py-8 lg:py-0 lg:h-full lg:overflow-y-auto ${view === 'match_history' ? 'w-full h-full' : ''}`}>
-                <h1 className="text-4xl lg:text-7xl font-black mb-8 lg:mb-12 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center">
+            {/* RIGHT COLUMN: Control Interface / Game */}
+            <div className={`flex flex-col items-center justify-center relative py-8 lg:py-0 w-full ${view === 'match_history' || view === 'game' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'}`}>
+                <h1 className="text-3xl md:text-5xl lg:text-7xl font-black mb-8 lg:mb-12 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
                     BATTLESHIP_NET
                 </h1>
 
@@ -161,7 +168,7 @@ export default function Lobby() {
                             <p className="tip text-xl lg:text-3xl">CREATE ROOM</p>
                             <p className="second-text text-sm lg:text-base">Start a new battle</p>
                         </div>
-                        <div className="card blue" onClick={() => setView('join')}>
+                        <div className="card blue" onClick={() => { setView('join'); setGameCode(''); }}>
                             <p className="tip text-xl lg:text-3xl">JOIN ROOM</p>
                             <p className="second-text text-sm lg:text-base">Enter existing code</p>
                         </div>
@@ -219,6 +226,16 @@ export default function Lobby() {
                         <p className="text-gray-500 text-xs mt-4 animate-pulse">WAITING_FOR_PEER_CONNECTION...</p>
                         <button onClick={handleBack} className="mt-6 text-xs text-gray-500 hover:text-white">CANCEL</button>
                     </div>
+                )}
+
+                {view === 'game' && (
+                    <GameBoard
+                        socket={socket}
+                        roomCode={roomCode || gameCode}
+                        shipConfig={shipConfig}
+                        onLeave={handleBack}
+                        nick={nick}
+                    />
                 )}
             </div>
         </div>
