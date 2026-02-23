@@ -41,13 +41,11 @@ Backend zarządza logiką gry, pokojami i komunikacją między graczami.
 
 4.  Uruchom serwer:
     ```bash
-    uvicorn main:app --reload
+    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ```
     ```bash
-    cd backend; uvicorn main:app --reload
+    cd backend;  uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ```
-    ✅ Serwer wystartuje pod adresem: `http://127.0.0.1:8000`
-
 ---
 
 ### 2. Frontend (Klient)
@@ -68,7 +66,7 @@ Frontend to warstwa wizualna, w której grasz.
     ```bash
     npm run dev
     ```
-    ✅ Aplikacja będzie dostępna pod adresem: `http://localhost:5173` (lub podobnym, sprawdź w terminalu).
+    ✅ Aplikacja będzie dostępna pod adresem: `http://192.xxx.x.xx:5173` (lub podobnym, sprawdź w terminalu).
 
 ---
 
