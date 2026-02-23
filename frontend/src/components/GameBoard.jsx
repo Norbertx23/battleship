@@ -15,7 +15,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     const [enemySunkShips, setEnemySunkShips] = useState([]);
     const [sunkMessage, setSunkMessage] = useState(null);
     const [isMarkMode, setIsMarkMode] = useState(false);
-
+    const [showBoardAfterGame, setShowBoardAfterGame] = useState(false);
     // Placement State
     const [draggedShip, setDraggedShip] = useState(null);
     const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -346,12 +346,12 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     return (
         <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl relative">
             {/* Top Area */}
-            <div className="absolute top-0 left-0 w-full flex justify-between items-start px-4">
+            <div className="absolute top-0 left-0 w-full flex justify-between items-start px-4 z-10">
                 <button
                     onClick={onLeave}
                     className="text-[#00f2ea] flex items-center gap-2 hover:text-white transition-colors text-sm font-bold tracking-widest"
                 >
-                    &larr; ABORT MISSION
+                    &larr; {phase === 'game_over' ? 'RETURN TO LOBBY' : 'ABORT MISSION'}
                 </button>
                 {nick && (
                     <div className="text-right">
@@ -365,7 +365,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                 {phase === 'placement' && "DEPLOY YOUR FLEET"}
                 {phase === 'waiting' && "WAITING FOR OPPONENT..."}
                 {phase === 'battle' && (isMyTurn ? "YOUR TURN - FIRE!" : "ENEMY TURN - EVADE!")}
-                {phase === 'game_over' && result}
+                {phase === 'game_over' && `${result} - BATTLE REVIEW`}
             </h1>
 
             {sunkMessage && (
@@ -535,12 +535,15 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                             {/* MARK MODE TOGGLE (MOBILE) */}
                             <button
                                 onClick={() => setIsMarkMode(!isMarkMode)}
-                                className={`mt-4 w-full py-2 border rounded font-bold text-xs tracking-widest transition-colors ${isMarkMode
-                                    ? 'bg-[#eab308] text-black border-[#eab308] shadow-[0_0_10px_#eab308]'
-                                    : 'bg-transparent text-gray-400 border-gray-600 hover:text-white hover:border-gray-400'
+                                disabled={phase === 'game_over'}
+                                className={`mt-4 w-full py-2 border rounded font-bold text-xs tracking-widest transition-colors 
+                                    ${phase === 'game_over' ? 'bg-gray-800 text-gray-600 border-gray-700 cursor-not-allowed' :
+                                        (isMarkMode
+                                            ? 'bg-[#eab308] text-black border-[#eab308] shadow-[0_0_10px_#eab308]'
+                                            : 'bg-transparent text-gray-400 border-gray-600 hover:text-white hover:border-gray-400')
                                     }`}
                             >
-                                {isMarkMode ? 'MARK MODE: ON (TAP TO MARK)' : 'MARK MODE: OFF (TAP TO FIRE)'}
+                                {phase === 'game_over' ? 'RADAR OFFLINE' : (isMarkMode ? 'MARK MODE: ON (TAP TO MARK)' : 'MARK MODE: OFF (TAP TO FIRE)')}
                             </button>
                         </div>
 
@@ -651,11 +654,18 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
             </div>
 
             {/* GAME OVER MODAL */}
-            {phase === 'game_over' && (
+            {phase === 'game_over' && !showBoardAfterGame && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
-                    <div className={`cyber-panel p-8 md:p-12 flex flex-col items-center gap-6 text-center max-w-md w-full border-2 
+                    <div className={`cyber-panel relative p-8 md:p-12 flex flex-col items-center gap-6 text-center max-w-md w-full border-2 
                         ${result === 'VICTORY' ? 'border-[#39ff14] shadow-[0_0_30px_rgba(57,255,20,0.2)]' : 'border-red-500 shadow-[0_0_30px_rgba(255,0,0,0.2)]'}
                     `}>
+                        <button
+                            onClick={() => setShowBoardAfterGame(true)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-[#00f2ea] transition-colors text-xs font-bold tracking-widest flex items-center gap-1"
+                        >
+                            SHOW BOARD &#8594;
+                        </button>
+
                         <h2 className={`text-5xl md:text-6xl font-black tracking-tighter cyber-text-glow ${result === 'VICTORY' ? 'text-[#39ff14]' : 'text-red-500'}`}>
                             {result}
                         </h2>
@@ -663,7 +673,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                             {result === 'VICTORY' ? "MISSION ACCOMPLISHED." : "ALL SHIPS LOST."}
                         </p>
                         <button onClick={onLeave} className="cyber-button w-full text-lg py-4 hover:scale-105 transition-transform">
-                            RETURN TO LOBBY / ABORT
+                            LEAVE TO LOBBY
                         </button>
                     </div>
                 </div>
