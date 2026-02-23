@@ -135,10 +135,12 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
         });
         socket.on('player_disconnected', (data) => {
             if (data.forfeit) {
-                setTimeout(() => alert("⚠️ ENEMY RETREATED: " + data.message), 100);
+                setTimeout(() => alert("ENEMY RETREATED: " + data.message), 100);
             } else if (!data.silent) {
-                alert("⚠️ SIGNAL LOST: " + data.message);
-                if (onLeave) onLeave();
+                setTimeout(() => {
+                    alert("SIGNAL LOST: " + data.message + "\nReturning to Lobby.");
+                    if (onLeave) onLeave();
+                }, 100);
             }
         });
         return () => {
@@ -390,7 +392,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                                         ${!isValid ? 'bg-red-500 animate-pulse border-2 border-red-900 shadow-[0_0_15px_red] z-20'
                                             : (isSelected ? 'bg-[#ff9900] z-10 shadow-[0_0_15px_#ff9900]' : 'bg-[#39ff14]')}
                                         ${phase === 'placement' ? 'cursor-pointer hover:brightness-125' : ''}
-                                        ${isDragged ? 'opacity-20 grayscale blur-[1px]' : ''}
+                                        ${isDragged ? 'opacity-20 grayscale blur-[1px] pointer-events-none' : ''}
                                     `}
                                     style={{
                                         width: `calc(${width}% - 4px)`,
