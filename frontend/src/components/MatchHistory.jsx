@@ -38,7 +38,7 @@ export default function MatchHistory() {
         return () => clearTimeout(timer);
     }, [page, search]);
     return (<div className="fixed inset-0 z-50 w-full min-h-[100dvh] text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start overflow-hidden">
-        <div className="w-full flex-1 max-w-4xl flex flex-col pt-4 pb-8">
+        <div className="w-full flex-1 max-w-4xl lg:max-w-6xl 2xl:max-w-screen-xl 3xl:max-w-screen-2xl w-[95%] md:w-[90%] flex flex-col pt-4 pb-8">
             <div className="flex justify-between items-end mb-4 md:mb-8 text-right w-full">
                 <button
                     onClick={() => navigate('/')}
