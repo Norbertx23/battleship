@@ -60,6 +60,23 @@ def check_hit(board_ships, x, y):
     return 'miss'
 
 
+def get_sunk_ships(board_ships, shots):
+    sunk = []
+    hit_coords = { (s['x'], s['y']) for s in shots if s['result'] == 'hit' }
+    for ship in board_ships:
+        s_len = ship['size']
+        is_vertical = ship['vertical']
+        dx, dy = (1, 0) if not is_vertical else (0, 1)
+
+        ship_coords = set()
+        for i in range(s_len):
+            ship_coords.add((ship['x'] + i * dx, ship['y'] + i * dy))
+            
+        if ship_coords.issubset(hit_coords):
+            sunk.append(ship)
+    return sunk
+
+
 def check_win(board_ships, shots):
     ship_coords = set()
     for ship in board_ships:

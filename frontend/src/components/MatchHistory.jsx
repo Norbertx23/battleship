@@ -19,7 +19,7 @@ export default function MatchHistory() {
             setLoading(true);
         }, 400);
 
-        fetch(`http://localhost:8000/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
+        fetch(`/battleship_api/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
             .then(response => response.json())
             .then(data => {
                 clearTimeout(timer);
@@ -37,19 +37,19 @@ export default function MatchHistory() {
 
         return () => clearTimeout(timer);
     }, [page, search]);
-
-    return (<div className="fixed inset-0 z-50 w-full text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start overflow-hidden">
-        <h1 className="self-end text-3xl lg:text-5xl font-black mb-4 lg:mb-8 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-right">
-            BATTLESHIP_NET
-        </h1>
-
-        <div className="w-full max-w-4xl h-[90vh] flex flex-col">
-            <button
-                onClick={() => navigate('/')}
-                className="mb-4 text-[#00f2ea] hover:underline flex items-center gap-2 self-start"
-            >
-                ← BACK TO MENU
-            </button>
+    return (<div className="fixed inset-0 z-50 w-full min-h-[100dvh] text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start overflow-hidden">
+        <div className="w-full flex-1 max-w-4xl lg:max-w-6xl 2xl:max-w-screen-xl 3xl:max-w-screen-2xl w-[95%] md:w-[90%] flex flex-col pt-4 pb-8">
+            <div className="flex justify-between items-end mb-4 md:mb-8 text-right w-full">
+                <button
+                    onClick={() => navigate('/')}
+                    className="text-[#00f2ea] hover:underline flex items-center gap-2 self-start"
+                >
+                    ← BACK TO MENU
+                </button>
+                <h1 className="text-3xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter">
+                    BATTLESHIP_NET
+                </h1>
+            </div>
 
             <input
                 type="text"
@@ -94,8 +94,8 @@ export default function MatchHistory() {
                                         <td className="p-[0.5vh] md:px-[2vh] text-[#39ff14] font-bold font-mono truncate">{item.winner_nick}</td>
                                         <td className="p-[0.5vh] md:px-[2vh] text-red-400 font-mono truncate">{item.winner_nick === item.player1_nick ? item.player2_nick : item.player1_nick}</td>
                                         <td className="p-[0.5vh] md:px-[2vh] text-[#00f2ea] text-right opacity-80 whitespace-nowrap">
-                                            <span className="md:hidden">{new Date(item.played_at).toLocaleDateString()}</span>
-                                            <span className="hidden md:inline">{new Date(item.played_at).toLocaleString()}</span>
+                                            <span className="md:hidden">{new Date(item.played_at + 'Z').toLocaleDateString()}</span>
+                                            <span className="hidden md:inline">{new Date(item.played_at + 'Z').toLocaleString()}</span>
                                         </td>
                                     </tr>
                                 ))}
