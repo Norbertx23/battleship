@@ -19,7 +19,7 @@ export default function MatchHistory() {
             setLoading(true);
         }, 400);
 
-        fetch(`/api/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
+        fetch(`/battleship_api/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
             .then(response => response.json())
             .then(data => {
                 clearTimeout(timer);
