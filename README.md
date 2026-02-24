@@ -86,3 +86,37 @@ Frontend to warstwa wizualna, w której grasz.
 *   `/frontend` - Interfejs użytkownika (React, Tailwind CSS).
 
 ---
+
+## 🐳 Wdrożenie na Homelab / Serwer (Docker)
+
+Zamiast odpalać grę z dwóch oddzielnych terminali u siebie, całość używa architektury Dockera. Wszystko co musisz zrobić, to wysłać pliki i odpalić jeden plik Compose!
+
+### 1. Kopiowanie na serwer (Aktualizacja Kodu)
+Komenda ignoruje wielkie foldery (Node_modules/Venv) i błyskawicznie przesyła projekt na Twój Homelab (zmień docelowy adrees IP serwera na swój):
+```bash
+rsync -avz --exclude 'node_modules' --exclude '.venv' --exclude '__pycache__' --exclude 'dist' ./ uzytkownik@192.168.1.200:~/battleship
+```
+
+### 2. Włączenie Kontenerów i Gry
+Będąc zalogowanym na serwer w folderze `battleship`, przebuduj i włącz aplikację w tle jednym rzutem.
+```bash
+docker compose up -d --build
+```
+*(Gdy tylko skrypt się zakończy, wejdź w przeglądarce po prostu na adres serwera `http://192.168.1.200/`)*
+
+### 3. Pierwsze uruchomienie (Inicjalizacja Bazy Danych)
+Gdy zainstalujesz grę po raz pierwszy, Twoja baza danych PostgreSQL jest pusta (brakuje tabel). Odpal w pracującym dockerze skrypt, który ją zbuduje!
+```bash
+docker exec -it battleship_backend python init_db.py
+```
+
+### 4. Wyłączanie Gry i Logi (Utrzymanie)
+Kiedy gra napotka 500 Internal Error, albo chcesz ją "zdjąć" z serwera:
+*   **Wyłączenie (Zdjęcie z sieci):**
+    ```bash
+    docker compose down
+    ```
+*   **Podgląd błędów Pythona (Ostatnie 50 linii):**
+    ```bash
+    docker logs battleship_backend --tail 50
+    ```

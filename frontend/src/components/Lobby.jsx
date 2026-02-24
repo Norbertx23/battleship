@@ -3,7 +3,9 @@ import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import GameBoard from './GameBoard';
 
-const socket = io("http://192.168.1.20:8000");
+const socket = io(window.location.origin, {
+    path: "/api/socket.io",
+});
 
 const ShipSelector = ({ masts, count, onChange }) => (
     <div className="flex flex-col gap-1 mb-3">
@@ -47,9 +49,9 @@ export default function Lobby() {
 
     const fetchData = async () => {
         try {
-            const topRes = await fetch("http://192.168.1.20:8000/stats/top-players?limit=3");
+            const topRes = await fetch("/api/stats/top-players?limit=3");
             setTopPlayers(await topRes.json());
-            const recentRes = await fetch("http://192.168.1.20:8000/stats/recent-matches?limit=10");
+            const recentRes = await fetch("/api/stats/recent-matches?limit=10");
             const recentData = await recentRes.json();
             setRecentMatches(recentData.items || []);
         } catch (err) { console.error(err); }
