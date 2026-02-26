@@ -14,6 +14,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     const [result, setResult] = useState(null); // 'VICTORY' or 'DEFEAT'
     const [enemySunkShips, setEnemySunkShips] = useState([]);
     const [sunkMessage, setSunkMessage] = useState(null);
+    const [opponentHitMessage, setOpponentHitMessage] = useState(null);
     const [isMarkMode, setIsMarkMode] = useState(false);
     const [showBoardAfterGame, setShowBoardAfterGame] = useState(false);
     // Placement State
@@ -31,6 +32,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     const phaseRef = useRef(phase);
     const dragPointerIdRef = useRef(null);
     const dragPointerTypeRef = useRef(null);
+    const opponentHitTimerRef = useRef(null);
 
     useEffect(() => { draggedShipRef.current = draggedShip; }, [draggedShip]);
     useEffect(() => { dragOverIndexRef.current = dragOverIndex; }, [dragOverIndex]);
@@ -139,6 +141,11 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                 }
             } else {
                 setMyBoard(prev => { const newBoard = [...prev]; newBoard[index] = result; return newBoard; });
+                if (result === 'hit') {
+                    setOpponentHitMessage(`OPPONENT HIT YOUR SHIP ON ROW ${y + 1} COL ${x + 1}`);
+                    if (opponentHitTimerRef.current) clearTimeout(opponentHitTimerRef.current);
+                    opponentHitTimerRef.current = setTimeout(() => setOpponentHitMessage(null), 3000);
+                }
             }
             setIsMyTurn(next_turn === socket.id);
         });
@@ -152,7 +159,10 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
         });
         socket.on('player_disconnected', (data) => {
             if (data.forfeit) {
-                setTimeout(() => alert("ENEMY RETREATED: " + data.message), 100);
+                setTimeout(() => {
+                    alert("ENEMY RETREATED: " + data.message);
+                    if (onLeave) onLeave();
+                }, 100);
             } else if (!data.silent) {
                 setTimeout(() => {
                     alert("SIGNAL LOST: " + data.message + "\nReturning to Lobby.");
@@ -161,6 +171,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
             }
         });
         return () => {
+            if (opponentHitTimerRef.current) clearTimeout(opponentHitTimerRef.current);
             socket.off('battle_start');
             socket.off('shot_result');
             socket.off('game_over');
@@ -505,6 +516,13 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                             );
                         })}
                     </div>
+
+                    {/* Opponent Hit Message */}
+                    {opponentHitMessage && (
+                        <div className="mt-4 w-full text-red-500 font-bold text-xs py-2 animate-pulse shadow-[0_0_10px_red] border border-red-500 bg-red-900/30 text-center uppercase tracking-widest pointer-events-none">
+                            {opponentHitMessage}
+                        </div>
+                    )}
                 </div>
 
                 {/* ENEMY BOARD */}

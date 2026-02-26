@@ -11,7 +11,7 @@ import uuid
 from sqlalchemy import or_
 import game_manager as gm
 
-
+models.Base.metadata.create_all(bind=engine)
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 fastapi_app = FastAPI()
 
@@ -51,13 +51,13 @@ async def handle_leave(sid, room_id):
                 
                 if current_status == 'finished':
                     await sio.emit('player_disconnected', {'message': '', 'silent': True}, room=room_id)
-                elif current_status == 'playing' or (current_status == 'waiting' and has_placed_ships):
+                elif current_status == 'playing':
                     room_data['status'] = 'finished'
                     save_match_to_db(remaining_nick, leaving_nick, remaining_nick)
                     await sio.emit('game_over', {'winner': remaining_sid}, room=room_id)
                     await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
                 else:
-                    await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} left the room.'}, room=room_id)
+                    await sio.emit('player_disconnected', {'message': f'Player {leaving_nick} left the room.'}, room=room_id)
 
 @sio.event
 async def leave_room(sid, data):

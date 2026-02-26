@@ -82,16 +82,30 @@ export default function Lobby() {
             setView('game');
         });
         socket.on('error', (d) => alert(d.message));
+        socket.on('player_disconnected', (d) => {
+            if (view !== 'menu' && !d.silent) {
+                alert("SIGNAL LOST: " + d.message + "\nReturning to Lobby.");
+                setView('menu');
+                setRoomCode("");
+            }
+        });
 
-        return () => { socket.off('room_created'); socket.off('game_start'); socket.off('error'); }
+        return () => {
+            socket.off('room_created');
+            socket.off('game_start');
+            socket.off('error');
+            socket.off('player_disconnected');
+        }
     }, []);
 
     const handleBack = () => {
-        if (roomCode) {
-            socket.emit('leave_room', { room_id: roomCode });
+        const activeRoom = roomCode || gameCode;
+        if (activeRoom) {
+            socket.emit('leave_room', { room_id: activeRoom });
         }
         setView('menu');
         setRoomCode("");
+        setGameCode("");
     };
 
     const handleAction = () => {
@@ -125,7 +139,7 @@ export default function Lobby() {
                         <ul className="space-y-2 lg:space-y-3 lg:overflow-y-auto pr-2 custom-scrollbar">
                             {topPlayers.map((p, idx) => (
                                 <li key={idx} className="flex justify-between items-center border-b border-[#00f2ea33] pb-2 text-sm lg:text-base">
-                                    <span className={`font-bold ${idx === 0 ? 'text-[#a855f7]' : 'text-white'}`}>#{idx + 1} {p.nick.toUpperCase()}</span>
+                                    <span className={`font-bold ${idx === 0 ? 'text-[#a855f7]' : 'text-white'}`}>#{idx + 1} {p.nick}</span>
                                     <span className="font-mono text-[#00f2ea]">{p.wins} WINS</span>
                                 </li>
                             ))}
