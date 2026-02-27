@@ -61,3 +61,26 @@ Kiedy gra napotka 500 Internal Error, albo chcesz ją "zdjąć" z serwera:
     ```bash
     docker logs battleship_backend --tail 50
     ```
+
+---
+
+## 🖥️ Aplikacja Desktopowa (Cienki Klient)
+
+Możesz zbudować aplikację desktopową, która połączy się z Twoją instancją gry (homelab / serwer LAN), działając jako szybka do uruchomienia "okienkowa" przeglądarka bez paska adresu.
+
+1.  Zainstaluj zależności (wymaga Node.js):
+    ```bash
+    cd desktop-client
+    npm install
+    ```
+
+2.  Zbuduj aplikację dla swojego systemu (Windows, macOS lub Linux):
+    *   **macOS:**
+        ```bash
+        npm run build:mac
+        ```
+    *   **Windows:**
+        ```bash
+        npm run build:win
+        ```
+    Gotowe pliki instalacyjne (`.exe`, `.dmg`) pojawią się w folderze `desktop-client/dist/`.

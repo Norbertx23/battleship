@@ -187,7 +187,7 @@ export default function Lobby() {
                 )}
 
                 {view === 'menu' && (
-                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-4 lg:gap-6 items-center">
+                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-4 lg:gap-6 items-center my-auto">
                         <div className="card red" onClick={() => setView('create')}>
                             <p className="tip text-xl lg:text-3xl">CREATE ROOM</p>
                             <p className="second-text text-sm lg:text-base">Start a new battle</p>
