@@ -35,7 +35,7 @@ Zamiast odpalać grę z dwóch oddzielnych terminali u siebie, całość używa 
 ### 1. Kopiowanie na serwer (Aktualizacja Kodu)
 Komenda ignoruje wielkie foldery (Node_modules/Venv) i błyskawicznie przesyła projekt na Twój Homelab (zmień docelowy adrees IP serwera na swój):
 ```bash
-rsync -avz --exclude 'node_modules' --exclude '.venv' --exclude '__pycache__' --exclude 'dist' ./ uzytkownik@192.168.1.200:~/battleship
+rsync -avz --exclude 'node_modules' --exclude '.venv' --exclude '__pycache__' --exclude 'dist' ./ uzytkownik@192.168.X.XYZ:~/battleship
 ```
 
 ### 2. Włączenie Kontenerów i Gry
