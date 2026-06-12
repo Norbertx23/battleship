@@ -43,7 +43,6 @@ Będąc zalogowanym na serwer w folderze `battleship`, przebuduj i włącz aplik
 ```bash
 docker compose up -d --build
 ```
-*(Gdy tylko skrypt się zakończy, wejdź w przeglądarce po prostu na adres serwera `http://192.168.1.200/`)*
 
 ### 3. Pierwsze uruchomienie (Inicjalizacja Bazy Danych)
 Gdy zainstalujesz grę po raz pierwszy, Twoja baza danych PostgreSQL jest pusta (brakuje tabel). Odpal w pracującym dockerze skrypt, który ją zbuduje!
