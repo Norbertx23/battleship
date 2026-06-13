@@ -35,7 +35,15 @@ Zamiast odpalać grę z dwóch oddzielnych terminali u siebie, całość używa 
 ### 1. Kopiowanie na serwer (Aktualizacja Kodu)
 Komenda ignoruje wielkie foldery (Node_modules/Venv) i błyskawicznie przesyła projekt na Twój Homelab (zmień docelowy adrees IP serwera na swój):
 ```bash
-rsync -avz --exclude 'node_modules' --exclude '.venv' --exclude '__pycache__' --exclude 'dist' ./ uzytkownik@192.168.1.200:~/battleship
+rsync -avz --delete \
+  --exclude '.git' \
+  --exclude '.env' \
+  --exclude '.env.*' \
+  --exclude 'node_modules' \
+  --exclude '.venv' \
+  --exclude '__pycache__' \
+  --exclude 'dist' \
+  ./ uzytkownik@192.168.X.XYZ:~/battleship
 ```
 
 ### 2. Włączenie Kontenerów i Gry
@@ -43,7 +51,6 @@ Będąc zalogowanym na serwer w folderze `battleship`, przebuduj i włącz aplik
 ```bash
 docker compose up -d --build
 ```
-*(Gdy tylko skrypt się zakończy, wejdź w przeglądarce po prostu na adres serwera `http://192.168.1.200/`)*
 
 ### 3. Pierwsze uruchomienie (Inicjalizacja Bazy Danych)
 Gdy zainstalujesz grę po raz pierwszy, Twoja baza danych PostgreSQL jest pusta (brakuje tabel). Odpal w pracującym dockerze skrypt, który ją zbuduje!
