@@ -64,6 +64,49 @@ Kiedy gra napotka 500 Internal Error, albo chcesz ją "zdjąć" z serwera:
 
 ---
 
+## 🩺 Healthcheck
+
+Backend wystawia endpoint `GET /healthcheck`, który sprawdza połączenie z bazą danych:
+*   `200 {"status": "ok", "database": "ok"}` — wszystko działa.
+*   `503 {"status": "error", "database": "unreachable"}` — baza jest niedostępna.
+
+Docker Compose używa go automatycznie (healthcheck kontenera), a pipeline CI/CD weryfikuje nim każdy deploy. Ręczne sprawdzenie:
+```bash
+curl http://192.168.1.200:8001/healthcheck
+```
+
+---
+
+## 🔄 CI/CD (GitHub Actions)
+
+Każdy `git push` na branch `main` uruchamia pipeline (`.github/workflows/ci-cd.yml`):
+
+1.  **Testy backendu** — pytest z prawdziwym PostgreSQL (logika gry + endpointy API).
+2.  **Build frontendu** — `npm ci && npm run build` (wyłapuje błędy kompilacji Reacta/Vite).
+3.  **Budowanie obrazów Dockera** — weryfikacja obu Dockerfile.
+4.  **Deploy na homelab** — tylko gdy wszystkie powyższe przejdą; runner na serwerze odpala `docker compose up -d --build` i weryfikuje `/healthcheck`.
+
+Pull requesty uruchamiają tylko kroki 1–3 (bez deployu).
+
+### Jednorazowa konfiguracja
+
+**1. Sekrety repozytorium** (GitHub → Settings → Secrets and variables → Actions → New repository secret):
+*   `POSTGRES_USER`
+*   `POSTGRES_PASSWORD`
+*   `POSTGRES_DB`
+
+**2. Self-hosted runner na serwerze** (GitHub → Settings → Actions → Runners → New self-hosted runner → Linux). Skopiuj wyświetlone komendy i wykonaj je na homelabie, a potem zainstaluj runnera jako usługę:
+```bash
+cd ~/actions-runner
+sudo ./svc.sh install
+sudo ./svc.sh start
+```
+Runner łączy się z GitHubem połączeniem **wychodzącym** — nie wymaga otwierania żadnych portów na routerze (działa też za CGNAT).
+
+Po tej konfiguracji ręczny `rsync` z sekcji wyżej nie jest już potrzebny — wystarczy `git push`.
+
+---
+
 ## 🖥️ Aplikacja Desktopowa (Cienki Klient)
 
 Możesz zbudować aplikację desktopową, która połączy się z Twoją instancją gry (homelab / serwer LAN), działając jako szybka do uruchomienia "okienkowa" przeglądarka bez paska adresu.

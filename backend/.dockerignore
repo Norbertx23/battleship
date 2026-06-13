@@ -8,3 +8,6 @@ env
 .vscode
 *.db
 *.sqlite3
+tests
+conftest.py
+requirements-dev.txt

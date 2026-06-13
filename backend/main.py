@@ -2,8 +2,9 @@ import random
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 import models, schemas
 from database import engine, SessionLocal
 import socketio
@@ -192,7 +193,6 @@ async def fire_shot(sid, data):
                  await sio.emit('game_over', {'winner': sid}, room=room_id)
                  room['status'] = 'finished'
                  
-                 # Save game result
                  p1_sid = list(room['players'].keys())[0]
                  p2_sid = list(room['players'].keys())[1]
                  winner_nick = room['players'][sid]
@@ -204,6 +204,16 @@ async def fire_shot(sid, data):
 @fastapi_app.get("/")
 def read_root():
     return {"message": "Battleship API"}
+
+
+@fastapi_app.get("/healthcheck")
+def healthcheck():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ok", "database": "ok"}
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "error", "database": "unreachable"})
 
 
 @fastapi_app.get("/stats/recent-matches", response_model=schemas.MatchListResponse)
