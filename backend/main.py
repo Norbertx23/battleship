@@ -55,7 +55,7 @@ async def handle_leave(sid, room_id):
                 elif current_status == 'playing':
                     room_data['status'] = 'finished'
                     save_match_to_db(remaining_nick, leaving_nick, remaining_nick)
-                    await sio.emit('game_over', {'winner': remaining_sid}, room=room_id)
+                    await sio.emit('game_over', {'winner': remaining_sid, 'enemy_ships': room_data['boards'].get(sid, [])}, room=room_id)
                     await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
                 else:
                     await sio.emit('player_disconnected', {'message': f'Player {leaving_nick} left the room.'}, room=room_id)
@@ -190,15 +190,20 @@ async def fire_shot(sid, data):
 
         if result == 'hit':
              if gm.check_win(opponent_ships, room['shots'][sid]):
-                 await sio.emit('game_over', {'winner': sid}, room=room_id)
                  room['status'] = 'finished'
-                 
+
+                 # Reveal each player's enemy fleet at game over
+                 for p_sid in list(room['players'].keys()):
+                     others = [s for s in room['players'].keys() if s != p_sid]
+                     enemy_ships = room['boards'].get(others[0], []) if others else []
+                     await sio.emit('game_over', {'winner': sid, 'enemy_ships': enemy_ships}, to=p_sid)
+
                  p1_sid = list(room['players'].keys())[0]
                  p2_sid = list(room['players'].keys())[1]
                  winner_nick = room['players'][sid]
                  p1_nick = room['players'][p1_sid]
                  p2_nick = room['players'][p2_sid]
-                 
+
                  save_match_to_db(winner_nick, p1_nick, p2_nick)
                  return
 @fastapi_app.get("/")

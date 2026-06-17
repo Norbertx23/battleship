@@ -4,6 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 const BOARD_SIZE = 10;
 const createEmptyBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
+// Expand a list of ships ({size, x, y, vertical}) into a Set of board cell indices
+const getShipCells = (ships) => {
+    const cells = new Set();
+    (ships || []).forEach(ship => {
+        for (let i = 0; i < ship.size; i++) {
+            const cx = ship.x + (ship.vertical ? 0 : i);
+            const cy = ship.y + (ship.vertical ? i : 0);
+            cells.add(cy * BOARD_SIZE + cx);
+        }
+    });
+    return cells;
+};
+
 export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) {
     // --- STATE ---
     const [phase, setPhase] = useState('placement'); // placement, waiting, battle, game_over
@@ -13,6 +26,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     const [isMyTurn, setIsMyTurn] = useState(false);
     const [result, setResult] = useState(null); // 'VICTORY' or 'DEFEAT'
     const [enemySunkShips, setEnemySunkShips] = useState([]);
+    const [enemyShips, setEnemyShips] = useState([]); // Revealed enemy fleet at game over
     const [sunkMessage, setSunkMessage] = useState(null);
     const [opponentHitMessage, setOpponentHitMessage] = useState(null);
     const [isMarkMode, setIsMarkMode] = useState(false);
@@ -152,6 +166,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
         socket.on('game_over', (data) => {
             setPhase('game_over');
             setResult(data.winner === socket.id ? 'VICTORY' : 'DEFEAT');
+            if (data.enemy_ships) setEnemyShips(data.enemy_ships);
         });
         socket.on('error', (data) => {
             alert(data.message);
@@ -354,6 +369,11 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     };
 
     // --- RENDER ---
+    const headerColorClass = phase === 'battle'
+        ? (isMyTurn ? 'text-[#39ff14]' : 'text-red-500')
+        : 'text-[#00f2ea]';
+    const enemyShipCells = phase === 'game_over' ? getShipCells(enemyShips) : null;
+
     return (
         <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl relative">
             {/* Top Area */}
@@ -372,7 +392,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                 )}
             </div>
 
-            <h1 className="text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold text-[#00f2ea] mt-10 md:mt-6 lg:mt-2 text-center px-2">
+            <h1 className={`text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold ${headerColorClass} mt-10 md:mt-6 lg:mt-2 text-center px-2 transition-colors`}>
                 {phase === 'placement' && "DEPLOY YOUR FLEET"}
                 {phase === 'waiting' && "WAITING FOR OPPONENT..."}
                 {phase === 'battle' && (isMyTurn ? "YOUR TURN - FIRE!" : "ENEMY TURN - EVADE!")}
@@ -531,23 +551,28 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                         <div className="cyber-panel p-4 flex flex-col items-center">
                             <h2 className="text-red-500 mb-2 font-bold">RADAR (Right-Click to Mark)</h2>
                             <div className="grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:w-[360px] lg:h-[360px] mx-auto">
-                                {enemyBoard.map((cell, i) => (
+                                {enemyBoard.map((cell, i) => {
+                                    const revealShip = enemyShipCells && enemyShipCells.has(i) && cell !== 'hit';
+                                    return (
                                     <div
                                         key={i}
                                         onClick={(e) => handleFireOrMark(e, i)}
                                         onContextMenu={(e) => handleMarkRadar(e, i)}
                                         className={`
                                              border border-[#ff000033] flex items-center justify-center cursor-crosshair text-xs overflow-hidden transition-all
-                                            ${cell === 'hit' ? 'bg-red-500 shadow-[0_0_15px_red]' : 'hover:bg-[#ff000022]'}
-                                            ${cell === 'miss' ? 'bg-gray-600' : ''}
-                                            ${cell === 'marked' ? 'bg-[#eab308] border-[#eab308] shadow-[0_0_10px_#eab308]' : ''}
-                                            ${!cell ? 'bg-[#00000055]' : ''}
+                                            ${cell === 'hit' ? 'bg-red-500 shadow-[0_0_15px_red]' : ''}
+                                            ${revealShip ? 'bg-[#39ff14] border-[#39ff14] shadow-[0_0_10px_#39ff14]' : ''}
+                                            ${!revealShip && cell === 'miss' ? 'bg-gray-600' : ''}
+                                            ${!revealShip && cell === 'marked' ? 'bg-[#eab308] border-[#eab308] shadow-[0_0_10px_#eab308]' : ''}
+                                            ${!revealShip && !cell ? 'bg-[#00000055] hover:bg-[#ff000022]' : ''}
                                         `}
                                     >
                                         {cell === 'hit' && 'X'}
                                         {cell === 'miss' && 'o'}
+                                        {revealShip && <span className="w-2/3 h-2/3 bg-[#0c3d0c] rounded-[1px]" />}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* MARK MODE TOGGLE (MOBILE) */}
