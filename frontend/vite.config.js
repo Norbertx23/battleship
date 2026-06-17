@@ -5,4 +5,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/battleship_net/',
   plugins: [react()],
+  // Dev-only: mirrors nginx, forwards /battleship_api -> backend (strips the prefix).
+  // Ignored by `vite build` (production uses nginx.conf).
+  server: {
+    proxy: {
+      '/battleship_api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/battleship_api/, ''),
+      },
+    },
+  },
 })

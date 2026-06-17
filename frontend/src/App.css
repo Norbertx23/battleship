@@ -81,7 +81,7 @@ body {
 .form-container .form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 .form-container .form-group {
@@ -135,7 +135,7 @@ body {
   padding: 12px 16px;
   font-size: inherit;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 0;
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.3s ease;

@@ -1,22 +1,52 @@
 import { useState, useEffect, useRef } from 'react';
+import CodeField from './CodeField';
 
 // --- HELPERS ---
 const BOARD_SIZE = 10;
 const createEmptyBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
-export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) {
+// Expand a list of ships ({size, x, y, vertical}) into a Set of board cell indices
+const getShipCells = (ships) => {
+    const cells = new Set();
+    (ships || []).forEach(ship => {
+        for (let i = 0; i < ship.size; i++) {
+            const cx = ship.x + (ship.vertical ? 0 : i);
+            const cy = ship.y + (ship.vertical ? i : 0);
+            cells.add(cy * BOARD_SIZE + cx);
+        }
+    });
+    return cells;
+};
+
+const resumeShipsToOverlay = (ships) => (ships || []).map((s, i) => ({
+    x: s.x,
+    y: s.y,
+    size: s.size,
+    rotation: s.vertical ? 90 : 0,
+    id: `resume-${i}-${s.x}-${s.y}`,
+}));
+
+const boardFromShots = (shots) => {
+    const board = createEmptyBoard();
+    (shots || []).forEach(s => { board[s.y * BOARD_SIZE + s.x] = s.result; });
+    return board;
+};
+
+export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, resumeState }) {
     // --- STATE ---
-    const [phase, setPhase] = useState('placement'); // placement, waiting, battle, game_over
-    const [myShips, setMyShips] = useState([]);
-    const [myBoard, setMyBoard] = useState(createEmptyBoard()); // Enemy shots on my board
-    const [enemyBoard, setEnemyBoard] = useState(createEmptyBoard()); // My shots on enemy board
-    const [isMyTurn, setIsMyTurn] = useState(false);
+    const [phase, setPhase] = useState(() => resumeState ? 'battle' : 'placement'); // placement, waiting, battle, game_over
+    const [myShips, setMyShips] = useState(() => resumeState ? resumeShipsToOverlay(resumeState.my_ships) : []);
+    const [myBoard, setMyBoard] = useState(() => resumeState ? boardFromShots(resumeState.enemy_shots) : createEmptyBoard()); // Enemy shots on my board
+    const [enemyBoard, setEnemyBoard] = useState(() => resumeState ? boardFromShots(resumeState.my_shots) : createEmptyBoard()); // My shots on enemy board
+    const [isMyTurn, setIsMyTurn] = useState(() => resumeState ? !!resumeState.my_turn : false);
     const [result, setResult] = useState(null); // 'VICTORY' or 'DEFEAT'
-    const [enemySunkShips, setEnemySunkShips] = useState([]);
+    const [enemySunkShips, setEnemySunkShips] = useState(() => resumeState ? (resumeState.enemy_sunk_sizes || []) : []);
+    const [enemyShips, setEnemyShips] = useState([]); // Revealed enemy fleet at game over
     const [sunkMessage, setSunkMessage] = useState(null);
     const [opponentHitMessage, setOpponentHitMessage] = useState(null);
     const [isMarkMode, setIsMarkMode] = useState(false);
     const [showBoardAfterGame, setShowBoardAfterGame] = useState(false);
+    const [graceInfo, setGraceInfo] = useState(null);
     // Placement State
     const [draggedShip, setDraggedShip] = useState(null);
     const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -150,8 +180,16 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
             setIsMyTurn(next_turn === socket.id);
         });
         socket.on('game_over', (data) => {
+            setGraceInfo(null);
             setPhase('game_over');
             setResult(data.winner === socket.id ? 'VICTORY' : 'DEFEAT');
+            if (data.enemy_ships) setEnemyShips(data.enemy_ships);
+        });
+        socket.on('opponent_disconnected', (data) => {
+            setGraceInfo({ nick: data.nick, secondsLeft: data.grace || 60 });
+        });
+        socket.on('opponent_reconnected', () => {
+            setGraceInfo(null);
         });
         socket.on('error', (data) => {
             alert(data.message);
@@ -175,10 +213,24 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
             socket.off('battle_start');
             socket.off('shot_result');
             socket.off('game_over');
+            socket.off('opponent_disconnected');
+            socket.off('opponent_reconnected');
             socket.off('error');
             socket.off('player_disconnected');
         };
     }, [socket]);
+
+    const isPaused = graceInfo !== null;
+    useEffect(() => {
+        if (!isPaused) return;
+        const timer = setInterval(() => {
+            setGraceInfo(prev => {
+                if (!prev) return prev;
+                return { ...prev, secondsLeft: Math.max(0, prev.secondsLeft - 1) };
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [isPaused]);
 
     // --- ACTIONS ---
     const isPlacementValid = (x, y, size, rotation, ignoreShipId = null) => {
@@ -341,6 +393,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
 
     const handleFireOrMark = (e, index) => {
         if (phase !== 'battle') return;
+        if (graceInfo) return;
 
         if (isMarkMode) {
             handleMarkRadar(e, index);
@@ -354,6 +407,11 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
     };
 
     // --- RENDER ---
+    const headerColorClass = phase === 'battle'
+        ? (isMyTurn ? 'text-[#39ff14]' : 'text-red-500')
+        : 'text-[#00f2ea]';
+    const enemyShipCells = phase === 'game_over' ? getShipCells(enemyShips) : null;
+
     return (
         <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl relative">
             {/* Top Area */}
@@ -372,7 +430,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                 )}
             </div>
 
-            <h1 className="text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold text-[#00f2ea] mt-10 md:mt-6 lg:mt-2 text-center px-2">
+            <h1 className={`text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold ${headerColorClass} mt-10 md:mt-6 lg:mt-2 text-center px-2 transition-colors`}>
                 {phase === 'placement' && "DEPLOY YOUR FLEET"}
                 {phase === 'waiting' && "WAITING FOR OPPONENT..."}
                 {phase === 'battle' && (isMyTurn ? "YOUR TURN - FIRE!" : "ENEMY TURN - EVADE!")}
@@ -531,23 +589,28 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                         <div className="cyber-panel p-4 flex flex-col items-center">
                             <h2 className="text-red-500 mb-2 font-bold">RADAR (Right-Click to Mark)</h2>
                             <div className="grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:w-[360px] lg:h-[360px] mx-auto">
-                                {enemyBoard.map((cell, i) => (
+                                {enemyBoard.map((cell, i) => {
+                                    const revealShip = enemyShipCells && enemyShipCells.has(i) && cell !== 'hit';
+                                    return (
                                     <div
                                         key={i}
                                         onClick={(e) => handleFireOrMark(e, i)}
                                         onContextMenu={(e) => handleMarkRadar(e, i)}
                                         className={`
                                              border border-[#ff000033] flex items-center justify-center cursor-crosshair text-xs overflow-hidden transition-all
-                                            ${cell === 'hit' ? 'bg-red-500 shadow-[0_0_15px_red]' : 'hover:bg-[#ff000022]'}
-                                            ${cell === 'miss' ? 'bg-gray-600' : ''}
-                                            ${cell === 'marked' ? 'bg-[#eab308] border-[#eab308] shadow-[0_0_10px_#eab308]' : ''}
-                                            ${!cell ? 'bg-[#00000055]' : ''}
+                                            ${cell === 'hit' ? 'bg-red-500 shadow-[0_0_15px_red]' : ''}
+                                            ${revealShip ? 'bg-[#39ff14] border-[#39ff14] shadow-[0_0_10px_#39ff14]' : ''}
+                                            ${!revealShip && cell === 'miss' ? 'bg-gray-600' : ''}
+                                            ${!revealShip && cell === 'marked' ? 'bg-[#eab308] border-[#eab308] shadow-[0_0_10px_#eab308]' : ''}
+                                            ${!revealShip && !cell ? 'bg-[#00000055] hover:bg-[#ff000022]' : ''}
                                         `}
                                     >
                                         {cell === 'hit' && 'X'}
                                         {cell === 'miss' && 'o'}
+                                        {revealShip && <span className="w-2/3 h-2/3 bg-[#0c3d0c] rounded-[1px]" />}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* MARK MODE TOGGLE (MOBILE) */}
@@ -670,6 +733,29 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick }) 
                     </div>
                 )}
             </div>
+
+            {graceInfo && phase === 'battle' && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
+                    <div className="cyber-panel p-8 md:p-12 flex flex-col items-center gap-4 text-center max-w-md w-full border-2 border-[#eab308] shadow-[0_0_30px_rgba(234,179,8,0.2)]">
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tighter cyber-text-glow text-[#eab308] animate-pulse">
+                            SIGNAL LOST
+                        </h2>
+                        <p className="text-gray-300 text-sm tracking-widest">
+                            {(graceInfo.nick || 'OPPONENT').toUpperCase()} DISCONNECTED
+                        </p>
+                        <p className="text-gray-500 text-xs tracking-widest">
+                            WAITING FOR RECONNECTION... SHARE THE ROOM CODE SO THEY CAN REJOIN.
+                        </p>
+                        {roomCode && <CodeField code={roomCode} revealable textClassName="text-lg" />}
+                        <div className="text-5xl md:text-6xl font-black font-mono text-[#eab308] drop-shadow-[0_0_10px_rgba(234,179,8,0.6)]">
+                            {graceInfo.secondsLeft}s
+                        </div>
+                        <p className="text-gray-500 text-[10px] tracking-widest">
+                            VICTORY IS AWARDED IF THEY DON'T RETURN IN TIME
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* GAME OVER MODAL */}
             {phase === 'game_over' && !showBoardAfterGame && (

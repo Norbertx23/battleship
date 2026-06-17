@@ -16,6 +16,8 @@ venv/
 .venv/
 env/
 .env
+*.db
+*.sqlite3
 
 # Node / Frontend
 node_modules/

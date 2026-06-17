@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import GameBoard from './GameBoard';
+import CodeField from './CodeField';
 
 const socket = io(window.location.origin, {
     path: "/battleship_api/socket.io",
 });
 
 const ShipSelector = ({ masts, count, onChange }) => (
-    <div className="flex flex-col gap-1 mb-3">
+    <div className="flex flex-col gap-1 mb-2">
         <div className="flex justify-between items-center text-xs text-[#00f2ea]">
             <span>{masts}-MAST SHIP</span>
             <span>COUNT: <span className="text-white font-bold">{count}</span></span>
@@ -46,6 +47,7 @@ export default function Lobby() {
     const [gameCode, setGameCode] = useState("");
     const [roomCode, setRoomCode] = useState("");
     const [shipConfig, setShipConfig] = useState({ "4": 1, "3": 2, "2": 2, "1": 4 });
+    const [resumeState, setResumeState] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -71,6 +73,11 @@ export default function Lobby() {
     // Initial Fetch (Leaderboard and Recent Matches)
     useEffect(() => {
 
+        socket.on('session', (data) => {
+            if (data.room_id && data.token) {
+                localStorage.setItem('bs_token_' + data.room_id, data.token);
+            }
+        });
         socket.on('room_created', (data) => {
             console.log("Room Created Event Received:", data);
             setRoomCode(data.room_id);
@@ -78,7 +85,17 @@ export default function Lobby() {
         });
         socket.on('game_start', (data) => {
             console.log("GAME STARTED! Config:", data.config);
+            setResumeState(null);
             setShipConfig(data.config);
+            setView('game');
+        });
+        socket.on('game_resumed', (data) => {
+            console.log("GAME RESUMED!", data);
+            setResumeState(data);
+            setShipConfig(data.config);
+            setRoomCode(data.room_id);
+            setGameCode(data.room_id);
+            if (data.nick) setNick(data.nick);
             setView('game');
         });
         socket.on('error', (d) => alert(d.message));
@@ -91,8 +108,10 @@ export default function Lobby() {
         });
 
         return () => {
+            socket.off('session');
             socket.off('room_created');
             socket.off('game_start');
+            socket.off('game_resumed');
             socket.off('error');
             socket.off('player_disconnected');
         }
@@ -106,6 +125,7 @@ export default function Lobby() {
         setView('menu');
         setRoomCode("");
         setGameCode("");
+        setResumeState(null);
     };
 
     const handleAction = () => {
@@ -115,7 +135,10 @@ export default function Lobby() {
         if (!nick) return alert("IDENTITY REQUIRED");
 
         if (view === 'join') {
-            socket.emit('join_room', { room_id: gameCode, nick, config: {} });
+            const code = gameCode.trim().toUpperCase();
+            setGameCode(code);
+            const token = localStorage.getItem('bs_token_' + code) || undefined;
+            socket.emit('join_room', { room_id: code, nick, config: {}, token });
         }
         else {
             console.log("Creating room with ship config:", shipConfig);
@@ -218,7 +241,7 @@ export default function Lobby() {
 
                                 {view === 'create' && (
                                     <>
-                                        <div className="border-t border-[#414141] my-2 pt-2">
+                                        <div className="border-t border-[#414141] mt-2 pt-2">
                                             <p className="text-[#00f2ea] text-xs font-bold mb-3 tracking-widest text-center">FLEET CONFIGURATION</p>
                                             <ShipSelector masts="4" count={shipConfig["4"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
                                             <ShipSelector masts="3" count={shipConfig["3"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
@@ -245,8 +268,10 @@ export default function Lobby() {
 
                 {view === 'room_created' && (
                     <div className="mt-8 p-6 border-2 border-[#00f2ea] bg-[#00f2ea11] rounded text-center w-full max-w-sm cyber-panel">
-                        <p className="text-[#00f2ea] text-sm tracking-widest mb-2">SERVER_INITIALIZED</p>
-                        <p className="text-4xl font-mono font-bold text-white tracking-widest">{roomCode}</p>
+                        <p className="text-[#00f2ea] text-sm tracking-widest mb-4">SERVER_INITIALIZED</p>
+                        <div className="flex justify-center">
+                            <CodeField code={roomCode} textClassName="text-3xl md:text-4xl" />
+                        </div>
                         <p className="text-gray-500 text-xs mt-4 animate-pulse">WAITING_FOR_PEER_CONNECTION...</p>
                         <button onClick={handleBack} className="mt-6 text-xs text-gray-500 hover:text-white">CANCEL</button>
                     </div>
@@ -259,6 +284,7 @@ export default function Lobby() {
                         shipConfig={shipConfig}
                         onLeave={handleBack}
                         nick={nick}
+                        resumeState={resumeState}
                     />
                 )}
             </div>
