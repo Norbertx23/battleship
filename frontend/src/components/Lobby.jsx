@@ -5,7 +5,7 @@ import GameBoard from './GameBoard';
 import CodeField from './CodeField';
 
 const socket = io(window.location.origin, {
-    path: "/battleship_api/socket.io",
+    path: "/api/socket.io",
 });
 
 const ShipSelector = ({ masts, count, onChange }) => (
@@ -51,9 +51,9 @@ export default function Lobby() {
 
     const fetchData = async () => {
         try {
-            const topRes = await fetch("/battleship_api/stats/top-players?limit=3");
+            const topRes = await fetch("/api/stats/top-players?limit=3");
             setTopPlayers(await topRes.json());
-            const recentRes = await fetch("/battleship_api/stats/recent-matches?limit=10");
+            const recentRes = await fetch("/api/stats/recent-matches?limit=10");
             const recentData = await recentRes.json();
             setRecentMatches(recentData.items || []);
         } catch (err) { console.error(err); }
