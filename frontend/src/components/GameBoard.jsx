@@ -184,6 +184,8 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             setPhase('game_over');
             setResult(data.winner === socket.id ? 'VICTORY' : 'DEFEAT');
             if (data.enemy_ships) setEnemyShips(data.enemy_ships);
+            // Game is finished: the reconnect token is no longer useful, drop it.
+            if (roomCode) localStorage.removeItem('bs_token_' + roomCode);
         });
         socket.on('opponent_disconnected', (data) => {
             setGraceInfo({ nick: data.nick, secondsLeft: data.grace || 60 });

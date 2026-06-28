@@ -121,6 +121,7 @@ export default function Lobby() {
         const activeRoom = roomCode || gameCode;
         if (activeRoom) {
             socket.emit('leave_room', { room_id: activeRoom });
+            localStorage.removeItem('bs_token_' + activeRoom);
         }
         setView('menu');
         setRoomCode("");

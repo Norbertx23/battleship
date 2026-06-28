@@ -106,8 +106,17 @@ async def do_forfeit(room_id, leaver_sid, leaver_nick):
 
     remaining = list(room_data['players'].keys())
     if not remaining:
-        del rooms[room_id]
+        cancel_pending(room_data)
+        rooms.pop(room_id, None)
         print(f"Room {room_id} deleted (forfeit, empty)")
+        return
+
+    # If everyone still in the room has also dropped (is pending), nobody wins.
+    pending = room_data.get('pending', {})
+    if all(s in pending for s in remaining):
+        cancel_pending(room_data)
+        rooms.pop(room_id, None)
+        print(f"Room {room_id} closed (both players abandoned, no winner)")
         return
 
     remaining_sid = remaining[0]
@@ -189,11 +198,21 @@ async def leave_room(sid, data):
 async def disconnect(sid):
     print("disconnect ", sid)
     for room_id, room_data in list(rooms.items()):
-        if sid in room_data['players']:
-            if room_data.get('status') == 'playing' and not room_data.get('pending', {}).get(sid):
-                await start_grace(sid, room_id)
+        if sid not in room_data['players']:
+            continue
+        if room_data.get('status') == 'playing' and not room_data.get('pending', {}).get(sid):
+            pending = room_data.get('pending', {})
+            others = [s for s in room_data['players'] if s != sid]
+            if others and all(s in pending for s in others):
+                # Both players dropped mid-battle: no winner, just close the room
+                # so it doesn't linger waiting on grace timers.
+                cancel_pending(room_data)
+                rooms.pop(room_id, None)
+                print(f"Room {room_id} closed (both players dropped, no winner)")
             else:
-                await handle_leave(sid, room_id)
+                await start_grace(sid, room_id)
+        else:
+            await handle_leave(sid, room_id)
 
 @sio.event
 async def create_room(sid, data):
