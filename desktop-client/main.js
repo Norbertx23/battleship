@@ -1,7 +1,8 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
-const GAME_URL = 'http://192.168.1.200/battleship_net/';
+const DEFAULT_URL = 'https://battleship.swistak.fun/';
+const GAME_URL = process.env.BATTLESHIP_URL || DEFAULT_URL;
 
 let mainWindow;
 
@@ -13,28 +14,39 @@ function createWindow() {
         minHeight: 600,
         title: 'Battleship',
         icon: path.join(__dirname, 'assets', 'icon.png'),
+        backgroundColor: '#0a0a12',
         webPreferences: {
             nodeIntegration: false,
-            contextIsolation: true,
-            enableRemoteModule: false
+            contextIsolation: true
         },
-        autoHideMenuBar: true,
+        autoHideMenuBar: true
     });
 
     mainWindow.loadURL(GAME_URL).catch((err) => {
-        console.error('Failed to load GAME_URL:', err);
-        mainWindow.loadFile(path.join(__dirname, 'offline.html'));
+        console.error('Nie udalo sie zaladowac', GAME_URL, err);
+        showOffline();
     });
 
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+        if (validatedURL && validatedURL.includes('offline.html')) return;
         console.error('did-fail-load:', errorCode, errorDescription, validatedURL);
-        if (!validatedURL.includes('offline.html')) {
-            mainWindow.loadFile(path.join(__dirname, 'offline.html'));
-        }
+        showOffline();
+    });
+
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        shell.openExternal(url);
+        return { action: 'deny' };
+    });
+}
+
+function showOffline() {
+    mainWindow.loadFile(path.join(__dirname, 'offline.html'), {
+        query: { url: GAME_URL }
     });
 }
 
 app.whenReady().then(() => {
+    console.log('Laczenie z:', GAME_URL);
     createWindow();
 
     app.on('activate', () => {

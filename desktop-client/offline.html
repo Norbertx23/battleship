@@ -58,14 +58,20 @@
 <body>
     <div class="container">
         <h1>Brak połączenia z serwerem</h1>
-        <p>Nie można nawiązać połączenia z serwerem gry (192.168.1.200 / ubuntu-server).</p>
-        <p>Upewnij się, że jesteś podłączony do sieci domowej (LAN) lub VPN, a serwer działa poprawnie.</p>
+        <p>Nie udało się połączyć z serwerem gry:</p>
+        <p><code id="target"></code></p>
+        <p>Sprawdź połączenie z internetem. Jeśli korzystasz z własnego serwera,
+            uruchom aplikację ze zmienną <code>BATTLESHIP_URL</code>.</p>
         <button onclick="retry()">Spróbuj ponownie</button>
     </div>
 
     <script>
+        const target = new URLSearchParams(window.location.search).get('url')
+            || 'https://battleship.swistak.fun/';
+        document.getElementById('target').textContent = target;
+
         function retry() {
-            window.location.href = 'http://192.168.1.200/battleship_net/';
+            window.location.href = target;
         }
     </script>
 </body>
