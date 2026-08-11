@@ -11,8 +11,8 @@ def test_root():
     assert response.json() == {"message": "Battleship API"}
 
 
-def test_healthcheck():
-    response = client.get("/healthcheck")
+def test_healthz():
+    response = client.get("/healthz")
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "database": "ok"}
 

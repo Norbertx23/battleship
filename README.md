@@ -73,14 +73,28 @@ Kiedy gra napotka 500 Internal Error, albo chcesz ją "zdjąć" z serwera:
 
 ## 🩺 Healthcheck
 
-Backend wystawia endpoint `GET /healthcheck`, który sprawdza połączenie z bazą danych:
+Backend wystawia endpoint `GET /healthz`, który sprawdza połączenie z bazą danych:
 *   `200 {"status": "ok", "database": "ok"}` — wszystko działa.
 *   `503 {"status": "error", "database": "unreachable"}` — baza jest niedostępna.
 
 Docker Compose używa go automatycznie (healthcheck kontenera). Ręczne sprawdzenie:
 ```bash
-curl http://192.168.1.200:8001/healthcheck
+curl http://192.168.1.200:8001/healthz
 ```
+
+---
+
+## 🗄️ Zmiana schematu bazy
+
+Schemat tworzy **osobny krok** `init_db.py`, uruchamiany przed startem API (serwis `init-db` w compose) — aplikacja **nie** tworzy już tabel przy starcie. Dzięki temu deploy nie zmienia schematu w locie, a API nie wstanie, jeśli inicjalizacja zwróci kod != 0.
+
+⚠️ **Ważne ograniczenie:** `create_all()` tworzy wyłącznie **brakujące tabele**. **Nie modyfikuje tabel, które już istnieją.**
+
+Praktyczna konsekwencja: jeśli dodasz kolumnę do modelu w `models.py`, `init_db.py` przejdzie **bez błędu i bez ostrzeżenia** — kolumna nie powstanie w bazie. Awaria ujawni się dopiero w runtime, gdy użytkownik wykona zapytanie dotykające tej kolumny (`UndefinedColumn`). Czyli: zielony deploy, zielony healthcheck, a gra sypie błędem 500 przy pierwszym użyciu.
+
+Przy pierwszej realnej zmianie modelu masz dwie drogi:
+1.  **Ręczny `ALTER TABLE`** na bazie przed wdrożeniem nowej wersji — dobre dla pojedynczej, prostej zmiany.
+2.  **Wprowadzenie Alembica** — `alembic init`, konfiguracja na `Base.metadata`, a następnie `alembic stamp head` na istniejącej bazie (oznacza obecny schemat jako punkt wyjścia, **nie** przebudowuje tabel). Od tego momentu każda zmiana modelu to wersjonowana migracja z możliwością cofnięcia. Zalecane, gdy zmian ma być więcej niż jedna.
 
 ---
 

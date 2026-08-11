@@ -1,0 +1,12 @@
+# /etc/systemd/system/battleship-update.timer
+[Unit]
+Description=Battleship - cykliczne sprawdzanie nowych obrazow (co 30s)
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Unit=battleship-update.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,13 @@
+# /etc/systemd/system/battleship-update.service
+[Unit]
+Description=Battleship - pull nowych obrazow z GHCR i deploy
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/stacks/battleship/update.sh
+# stdout/stderr trafiaja do journald: journalctl -u battleship-update
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=600

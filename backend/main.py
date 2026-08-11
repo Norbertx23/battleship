@@ -13,7 +13,8 @@ import uuid
 from sqlalchemy import or_
 import game_manager as gm
 
-models.Base.metadata.create_all(bind=engine)
+# Schemat bazy tworzy osobny krok (init_db.py) przed startem aplikacji -
+# celowo NIE wolamy tu create_all(), zeby deploy nie zmienial schematu w locie.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 fastapi_app = FastAPI()
 
@@ -380,8 +381,8 @@ def read_root():
     return {"message": "Battleship API"}
 
 
-@fastapi_app.get("/healthcheck")
-def healthcheck():
+@fastapi_app.get("/healthz")
+def healthz():
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
