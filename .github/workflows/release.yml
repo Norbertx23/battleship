@@ -7,7 +7,13 @@ name: Release (GHCR)
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+# Domyslnie tylko odczyt; job publish podnosi sobie uprawnienia lokalnie.
+permissions:
+  contents: read
 
 env:
   # Nazwy obrazów w GHCR muszą być pisane małymi literami.
