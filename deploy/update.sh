@@ -23,6 +23,9 @@ LOCKFILE="/opt/stacks/battleship/.update.lock"
 API_IMAGE="ghcr.io/norbertx23/battleship-api"
 WEB_IMAGE="ghcr.io/norbertx23/battleship-web"
 DB_CONTAINER="bs_db"
+API_CONTAINER="bs_api"
+WEB_CONTAINER="bs_web"
+FAILED_FILE="/opt/stacks/battleship/.failed_digest"
 MIN_DUMP_BYTES=1024
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
@@ -43,10 +46,14 @@ source "$STACK_DIR/.env"
 set +a
 
 image_id() { docker image inspect --format '{{.Id}}' "$1:${APP_TAG:-latest}" 2>/dev/null || echo "none"; }
+running_id() { docker inspect --format '{{.Image}}' "$1" 2>/dev/null || echo "none"; }
 
-# --- 2. Czy jest cos nowego? -----------------------------------------------
-API_BEFORE=$(image_id "$API_IMAGE")
-WEB_BEFORE=$(image_id "$WEB_IMAGE")
+# --- 2. Czy uruchomiona wersja rozni sie od dostepnej? ----------------------
+# Porownujemy obraz DZIALAJACEGO kontenera z pobranym, a nie tag przed/po pull.
+# Inaczej po nieudanym deployu i rollbacku skrypt uznalby, ze nie ma nic nowego,
+# i nigdy nie ponowilby proby.
+API_BEFORE=$(running_id "$API_CONTAINER")
+WEB_BEFORE=$(running_id "$WEB_CONTAINER")
 
 docker compose pull --quiet
 
@@ -54,7 +61,14 @@ API_AFTER=$(image_id "$API_IMAGE")
 WEB_AFTER=$(image_id "$WEB_IMAGE")
 
 if [[ "$API_BEFORE" == "$API_AFTER" && "$WEB_BEFORE" == "$WEB_AFTER" ]]; then
-    log "Brak nowych obrazow - nic do zrobienia."
+    log "Uruchomiona wersja jest aktualna - nic do zrobienia."
+    exit 0
+fi
+
+# Nie probuj w kolko wdrazac wersji, ktora juz raz nie wstala.
+if [[ -f "$FAILED_FILE" ]] && grep -qxF "$API_AFTER $WEB_AFTER" "$FAILED_FILE"; then
+    log "Ta wersja juz zawiodla i zostala wycofana - pomijam."
+    log "Aby wymusic ponowna probe: rm $FAILED_FILE"
     exit 0
 fi
 
@@ -86,8 +100,11 @@ find "$BACKUP_DIR" -name 'battleship-*.sql.gz' -mtime +$RETENTION_DAYS -delete 2
 log "Uruchamiam nowa wersje..."
 if docker compose up -d --wait; then
     log "SUKCES: stack zdrowy na nowej wersji."
+    rm -f "$FAILED_FILE"
     exit 0
 fi
+
+echo "$API_AFTER $WEB_AFTER" > "$FAILED_FILE"
 
 # --- 5. Rollback ------------------------------------------------------------
 log "BLAD: healthcheck nie przeszedl. Rollback na poprzedni obraz."
