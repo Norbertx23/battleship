@@ -17,7 +17,9 @@ set -Eeuo pipefail
 STACK_DIR="/opt/stacks/battleship"
 BACKUP_DIR="/opt/backups"
 RETENTION_DAYS=14
-LOCKFILE="/var/lock/battleship-update.lock"
+# Blokada w katalogu stacka - usluga chodzi jako norbert, ktory nie ma
+# prawa zapisu do /var/lock.
+LOCKFILE="/opt/stacks/battleship/.update.lock"
 API_IMAGE="ghcr.io/norbertx23/battleship-api"
 WEB_IMAGE="ghcr.io/norbertx23/battleship-web"
 DB_CONTAINER="bs_db"

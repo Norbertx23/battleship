@@ -6,6 +6,14 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
+# Celowo NIE root: pull z GHCR wymaga logowania zapisanego w ~norbert/.docker/config.json.
+# norbert jest w grupie docker, wiec ma dostep do demona bez sudo.
+User=norbert
+Group=docker
+# systemd nie dziedziczy srodowiska logowania - bez tego docker nie znajdzie
+# poswiadczen GHCR i pull konczy sie bledem "unauthorized".
+Environment=HOME=/home/norbert
+Environment=DOCKER_CONFIG=/home/norbert/.docker
 ExecStart=/opt/stacks/battleship/update.sh
 # stdout/stderr trafiaja do journald: journalctl -u battleship-update
 StandardOutput=journal

@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import CodeField from './CodeField';
 
-// --- HELPERS ---
 const BOARD_SIZE = 10;
 const createEmptyBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
-// Expand a list of ships ({size, x, y, vertical}) into a Set of board cell indices
 const getShipCells = (ships) => {
     const cells = new Set();
     (ships || []).forEach(ship => {
@@ -33,27 +31,24 @@ const boardFromShots = (shots) => {
 };
 
 export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, resumeState }) {
-    // --- STATE ---
-    const [phase, setPhase] = useState(() => resumeState ? 'battle' : 'placement'); // placement, waiting, battle, game_over
+    const [phase, setPhase] = useState(() => resumeState ? 'battle' : 'placement');
     const [myShips, setMyShips] = useState(() => resumeState ? resumeShipsToOverlay(resumeState.my_ships) : []);
-    const [myBoard, setMyBoard] = useState(() => resumeState ? boardFromShots(resumeState.enemy_shots) : createEmptyBoard()); // Enemy shots on my board
-    const [enemyBoard, setEnemyBoard] = useState(() => resumeState ? boardFromShots(resumeState.my_shots) : createEmptyBoard()); // My shots on enemy board
+    const [myBoard, setMyBoard] = useState(() => resumeState ? boardFromShots(resumeState.enemy_shots) : createEmptyBoard());
+    const [enemyBoard, setEnemyBoard] = useState(() => resumeState ? boardFromShots(resumeState.my_shots) : createEmptyBoard());
     const [isMyTurn, setIsMyTurn] = useState(() => resumeState ? !!resumeState.my_turn : false);
-    const [result, setResult] = useState(null); // 'VICTORY' or 'DEFEAT'
+    const [result, setResult] = useState(null);
     const [enemySunkShips, setEnemySunkShips] = useState(() => resumeState ? (resumeState.enemy_sunk_sizes || []) : []);
-    const [enemyShips, setEnemyShips] = useState([]); // Revealed enemy fleet at game over
+    const [enemyShips, setEnemyShips] = useState([]);
     const [sunkMessage, setSunkMessage] = useState(null);
     const [opponentHitMessage, setOpponentHitMessage] = useState(null);
     const [isMarkMode, setIsMarkMode] = useState(false);
     const [showBoardAfterGame, setShowBoardAfterGame] = useState(false);
     const [graceInfo, setGraceInfo] = useState(null);
-    // Placement State
     const [draggedShip, setDraggedShip] = useState(null);
     const [dragOverIndex, setDragOverIndex] = useState(null);
     const [selectedShipId, setSelectedShipId] = useState(null);
     const [globalRotation, setGlobalRotation] = useState(0);
 
-    // Refs for event listeners to avoid stale closures
     const draggedShipRef = useRef(draggedShip);
     const dragOverIndexRef = useRef(dragOverIndex);
     const selectedShipIdRef = useRef(selectedShipId);
@@ -71,7 +66,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
     useEffect(() => { globalRotationRef.current = globalRotation; }, [globalRotation]);
     useEffect(() => { phaseRef.current = phase; }, [phase]);
 
-    // Derived states
     const shipCategories = Object.entries(shipConfig)
         .map(([size, count]) => ({ size: parseInt(size), maxCount: count }))
         .sort((a, b) => b.size - a.size);
@@ -80,7 +74,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         return myShips.filter(s => s.size === size).length === maxCount;
     });
 
-    // --- INIT ---
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'r' || e.key === 'R') {
@@ -92,14 +85,12 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         };
 
         const handleGlobalPointerUp = () => {
-            // Cancel drag if we drop outside the board
             if (draggedShipRef.current && dragOverIndexRef.current === null) {
                 setDraggedShip(null);
             }
         };
 
         const handleGlobalPointerDown = (e) => {
-            // Multi-touch for Mobile: If we tap a second finger while dragging
             if (draggedShipRef.current) {
                 handleRotateRef();
             }
@@ -144,12 +135,10 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         setMyShips(prev => prev.map(s => s.id === ship.id ? { ...s, rotation: newRotation } : s));
     };
 
-    // --- EFFECTS ---
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [phase]);
 
-    // --- SOCKET LISTENERS ---
     useEffect(() => {
         socket.on('battle_start', (data) => {
             setPhase('battle');
@@ -184,7 +173,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             setPhase('game_over');
             setResult(data.winner === socket.id ? 'VICTORY' : 'DEFEAT');
             if (data.enemy_ships) setEnemyShips(data.enemy_ships);
-            // Game is finished: the reconnect token is no longer useful, drop it.
             if (roomCode) localStorage.removeItem('bs_token_' + roomCode);
         });
         socket.on('opponent_disconnected', (data) => {
@@ -234,7 +222,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         return () => clearInterval(timer);
     }, [isPaused]);
 
-    // --- ACTIONS ---
     const isPlacementValid = (x, y, size, rotation, ignoreShipId = null) => {
         let x1, y1, x2, y2;
         const rot = (rotation % 360 + 360) % 360;
@@ -265,13 +252,12 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         return true;
     }
 
-    // CUSTOM DRAG-AND-DROP HANDLERS (Replaces HTML5 Native D&D)
     const handlePointerDown = (e, ship, source = 'yard') => {
-        if (e.button !== 0) return; // Only trigger on left click
+        if (e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
         if (e.target.releasePointerCapture) {
-            e.target.releasePointerCapture(e.pointerId); // Allows pointer events to pass through to grid behind it
+            e.target.releasePointerCapture(e.pointerId);
         }
 
         const initialRotation = source === 'board' ? ship.rotation : globalRotationRef.current;
@@ -314,17 +300,12 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             if (e.pointerType !== 'mouse' && !e.isPrimary) return;
             if (dragPointerTypeRef.current !== null && e.pointerType !== dragPointerTypeRef.current) return;
 
-            // Ignore pointer lifts from fingers that didn't start the drag
             if (dragPointerIdRef.current !== null && e.pointerId !== dragPointerIdRef.current) {
                 return;
             }
         }
 
         if (phase !== 'placement' || !draggedShipRef.current) {
-            // If they clicked on a placed ship quickly but didn't drag it anywhere, select it
-            if (!draggedShipRef.current && phase === 'placement') {
-                // Find if a ship is here (handled by the ship overlay click)
-            }
             return;
         }
 
@@ -408,7 +389,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         }
     };
 
-    // --- RENDER ---
     const headerColorClass = phase === 'battle'
         ? (isMyTurn ? 'text-[#39ff14]' : 'text-red-500')
         : 'text-[#00f2ea]';
@@ -416,7 +396,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
 
     return (
         <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl relative">
-            {/* Top Area */}
+            {}
             <div className="absolute top-0 left-0 w-full flex justify-between items-start px-4 z-10">
                 <button
                     onClick={onLeave}
@@ -446,7 +426,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             )}
 
             <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 w-full justify-center items-center lg:items-start" onContextMenu={handleContextMenu}>
-                {/* MY BOARD */}
+                {}
                 <div className="cyber-panel p-4 flex flex-col items-center">
                     <h2 className="text-[#39ff14] mb-2 font-bold">MY FLEET</h2>
                     <div
@@ -459,7 +439,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                             userSelect: phase === 'placement' ? 'none' : 'auto'
                         }}
                     >
-                        {/* Render Drop Zones / Grid */}
+                        {}
                         {myBoard.map((cell, i) => (
                             <div
                                 key={`cell-${i}`}
@@ -477,7 +457,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                             </div>
                         ))}
 
-                        {/* Drag Preview */}
+                        {}
                         {phase === 'placement' && draggedShip && dragOverIndex !== null && (
                             () => {
                                 const previewX = dragOverIndex % BOARD_SIZE;
@@ -508,7 +488,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                             }
                         )()}
 
-                        {/* Render Placed Ships As Overlays */}
+                        {}
                         {myShips.map(ship => {
                             const { x, y, size, rotation, id } = ship;
                             const cellWidth = 100 / BOARD_SIZE;
@@ -544,7 +524,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                                         userSelect: 'none'
                                     }}
                                 >
-                                    {/* Render Hits directly on the ship */}
+                                    {}
                                     {phase !== 'placement' && Array.from({ length: size }).map((_, i) => {
                                         const srot = (rotation % 360 + 360) % 360;
                                         let hx = x, hy = y;
@@ -577,7 +557,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                         })}
                     </div>
 
-                    {/* Opponent Hit Message */}
+                    {}
                     {opponentHitMessage && (
                         <div className="mt-4 w-full text-red-500 font-bold text-xs py-2 animate-pulse shadow-[0_0_10px_red] border border-red-500 bg-red-900/30 text-center uppercase tracking-widest pointer-events-none">
                             {opponentHitMessage}
@@ -585,7 +565,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                     )}
                 </div>
 
-                {/* ENEMY BOARD */}
+                {}
                 {phase !== 'placement' && phase !== 'waiting' && (
                     <div className="flex flex-col lg:flex-row gap-4">
                         <div className="cyber-panel p-4 flex flex-col items-center">
@@ -615,7 +595,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                                 })}
                             </div>
 
-                            {/* MARK MODE TOGGLE (MOBILE) */}
+                            {}
                             <button
                                 onClick={() => setIsMarkMode(!isMarkMode)}
                                 disabled={phase === 'game_over'}
@@ -630,7 +610,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                             </button>
                         </div>
 
-                        {/* ENEMY FLEET TRACKER */}
+                        {}
                         <div className="cyber-panel p-4 flex flex-col items-center lg:min-w-[130px]">
                             <h2 className="text-[#ff9900] mb-4 font-bold text-sm tracking-widest text-center">ENEMY<br />FLEET</h2>
                             <div className="flex flex-row lg:flex-col gap-4 justify-center items-center flex-wrap">
@@ -656,10 +636,10 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                     </div>
                 )}
 
-                {/* PLACEMENT CONTROLS & YARD */}
+                {}
                 {phase === 'placement' && (
                     <div className="flex flex-col items-center gap-6 w-full lg:w-[450px]">
-                        {/* Ship Yard */}
+                        {}
                         <div className="cyber-panel p-4 flex flex-col items-center w-full min-h-[120px]">
                             <h3 className="text-[#00f2ea] text-sm tracking-widest mb-4">AVAILABLE SHIPS</h3>
                             <div className="flex flex-wrap gap-4 justify-center items-end">
@@ -703,7 +683,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                             </div>
                         </div>
 
-                        {/* Controls */}
+                        {}
                         <div className="flex flex-col gap-4 items-stretch w-full">
                             <button onClick={handleRotate} className="cyber-button group relative">
                                 ROTATE (R / Right Click)

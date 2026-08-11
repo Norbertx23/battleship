@@ -12,11 +12,9 @@ import sys
 
 from sqlalchemy import inspect, text
 
-import models  # noqa: F401  - rejestruje modele w Base.metadata
+import models  # noqa: F401
 from database import Base, engine
 
-# Stala dla pg_advisory_xact_lock - chroni przed wyscigiem, gdy dwie instancje
-# init-db wystartuja rownoczesnie (np. rownolegly deploy).
 ADVISORY_LOCK_ID = 918273645
 
 log = logging.getLogger("init_db")
@@ -30,8 +28,6 @@ def main() -> int:
 
     try:
         with engine.begin() as conn:
-            # Blokada jest transakcyjna - zwalnia sie sama przy commit/rollback.
-            # Dostepna tylko w Postgresie; lokalny dev na SQLite pomija ten krok.
             if conn.dialect.name == "postgresql":
                 log.info("Czekam na advisory lock %s...", ADVISORY_LOCK_ID)
                 conn.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"),

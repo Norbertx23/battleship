@@ -65,12 +65,10 @@ export default function Lobby() {
         }
     }, [view]);
 
-    // Auto-scroll to top when view changes
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [view]);
 
-    // Initial Fetch (Leaderboard and Recent Matches)
     useEffect(() => {
 
         socket.on('session', (data) => {
@@ -152,10 +150,10 @@ export default function Lobby() {
             className={`min-h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
         >
 
-            {/* LEFT COLUMN: Stats */}
+            {}
             {view !== 'match_history' && view !== 'game' && (
                 <div className="flex flex-col justify-center gap-4 lg:gap-8 border-t lg:border-t-0 lg:border-r border-blue-500/30 pt-8 lg:pt-0 lg:pr-6 xl:pr-12 lg:min-h-0 lg:h-full overflow-hidden">
-                    {/* Top Players Panel */}
+                    {}
                     <div className="cyber-panel p-4 lg:p-6 rounded relative overflow-hidden flex-shrink-0 lg:max-h-[40%] flex flex-col">
                         <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#00f2ea] cyber-text-glow flex-shrink-0">
                             TOP_OPERATIVES
@@ -170,7 +168,7 @@ export default function Lobby() {
                         </ul>
                     </div>
 
-                    {/* Recent Matches Panel */}
+                    {}
                     <div className="cyber-panel p-4 lg:p-6 rounded relative h-auto lg:h-[45%] flex flex-col lg:overflow-hidden min-h-[300px] lg:min-h-0">
                         <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#a855f7] cyber-text-glow flex-shrink-0">
                             RECENT_MATCHES
@@ -202,7 +200,7 @@ export default function Lobby() {
                 </div>
             )}
 
-            {/* RIGHT COLUMN: Control Interface / Game */}
+            {}
             <div className={`flex flex-col items-center justify-start relative w-full ${view === 'match_history' || view === 'game' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'} ${view === 'game' ? 'pt-2 pb-2' : 'pt-4 md:pt-8 lg:pt-8 xl:pt-16 pb-8'}`}>
                 {view !== 'game' && (
                     <h1 className="text-3xl md:text-5xl xl:text-7xl font-black mb-6 lg:mb-10 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">

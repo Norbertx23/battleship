@@ -13,8 +13,6 @@ import uuid
 from sqlalchemy import or_
 import game_manager as gm
 
-# Schemat bazy tworzy osobny krok (init_db.py) przed startem aplikacji -
-# celowo NIE wolamy tu create_all(), zeby deploy nie zmienial schematu w locie.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 fastapi_app = FastAPI()
 
@@ -112,7 +110,6 @@ async def do_forfeit(room_id, leaver_sid, leaver_nick):
         print(f"Room {room_id} deleted (forfeit, empty)")
         return
 
-    # If everyone still in the room has also dropped (is pending), nobody wins.
     pending = room_data.get('pending', {})
     if all(s in pending for s in remaining):
         cancel_pending(room_data)
@@ -205,8 +202,6 @@ async def disconnect(sid):
             pending = room_data.get('pending', {})
             others = [s for s in room_data['players'] if s != sid]
             if others and all(s in pending for s in others):
-                # Both players dropped mid-battle: no winner, just close the room
-                # so it doesn't linger waiting on grace timers.
                 cancel_pending(room_data)
                 rooms.pop(room_id, None)
                 print(f"Room {room_id} closed (both players dropped, no winner)")
@@ -362,7 +357,6 @@ async def fire_shot(sid, data):
              if gm.check_win(opponent_ships, room['shots'][sid]):
                  room['status'] = 'finished'
 
-                 # Reveal each player's enemy fleet at game over
                  for p_sid in list(room['players'].keys()):
                      others = [s for s in room['players'].keys() if s != p_sid]
                      enemy_ships = room['boards'].get(others[0], []) if others else []
