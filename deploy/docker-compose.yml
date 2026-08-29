@@ -1,10 +1,3 @@
-# Stack produkcyjny - model pull (obrazy z GHCR, zero budowania na serwerze).
-# Docelowa lokalizacja: /opt/stacks/battleship/docker-compose.yml
-#
-# Wolumen jest EXTERNAL i wskazuje na istniejacy battleship_postgres_data.
-# Jesli wolumen nie istnieje, compose zwroci blad zamiast po cichu utworzyc
-# pusta baze - to celowe zabezpieczenie danych.
-
 name: battleship
 
 x-logging: &default-logging
@@ -25,8 +18,7 @@ services:
       TZ: Europe/Warsaw
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
+    networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -34,8 +26,6 @@ services:
       retries: 10
     logging: *default-logging
 
-  # Jednorazowy krok: tworzy schemat PRZED startem api.
-  # Ten sam obraz co api. Kod wyjscia != 0 zablokuje start api.
   init-db:
     image: ghcr.io/norbertx23/battleship-api:${APP_TAG:-latest}
     container_name: bs_init_db
@@ -44,13 +34,12 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
+    networks: [internal]
     depends_on:
       db:
         condition: service_healthy
     logging: *default-logging
 
-  # UWAGA: serwis MUSI nazywac sie `backend` - nginx wewnatrz obrazu web
-  # proxuje na http://backend:8000/ (frontend/nginx.conf).
   backend:
     image: ghcr.io/norbertx23/battleship-api:${APP_TAG:-latest}
     container_name: bs_api
@@ -58,11 +47,10 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
+    networks: [internal]
     depends_on:
       init-db:
         condition: service_completed_successfully
-    ports:
-      - "127.0.0.1:8011:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
       interval: 30s
@@ -75,11 +63,10 @@ services:
     image: ghcr.io/norbertx23/battleship-web:${APP_TAG:-latest}
     container_name: bs_web
     restart: unless-stopped
+    networks: [internal, edge]
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:3010:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/"]
       interval: 30s
@@ -92,3 +79,8 @@ volumes:
   postgres_data:
     external: true
     name: battleship_postgres_data
+
+networks:
+  internal:
+  edge:
+    external: true
