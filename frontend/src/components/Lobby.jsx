@@ -201,9 +201,9 @@ export default function Lobby() {
             )}
 
             {}
-            <div className={`flex flex-col items-center justify-start relative w-full ${view === 'match_history' || view === 'game' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'} ${view === 'game' ? 'pt-2 pb-2' : 'pt-4 md:pt-8 lg:pt-8 xl:pt-16 pb-8'}`}>
+            <div className={`flex flex-col items-center justify-start relative w-full ${view === 'match_history' || view === 'game' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'} ${view === 'game' ? 'pt-2 pb-2' : 'lobby-pane pt-4 md:pt-8 lg:pt-8 xl:pt-16 pb-8'}`}>
                 {view !== 'game' && (
-                    <h1 className="text-3xl md:text-5xl xl:text-7xl font-black mb-6 lg:mb-10 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
+                    <h1 className="lobby-title text-3xl md:text-5xl xl:text-7xl font-black mb-6 lg:mb-10 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
                         BATTLESHIP_NET
                     </h1>
                 )}
