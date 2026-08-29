@@ -1,4 +1,3 @@
-# /etc/systemd/system/battleship-update.timer
 [Unit]
 Description=Battleship - cykliczne sprawdzanie nowych obrazow (co 30s)
 
