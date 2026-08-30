@@ -7,13 +7,6 @@ body {
   /* Prevent horizontal scroll glitches */
 }
 
-.cards {
-
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
 .cards .red,
 .cards .blue,
 .cards .green {
@@ -27,7 +20,6 @@ body {
   justify-content: center;
   flex-direction: column;
   text-align: center;
-  height: 160px;
   width: 100%;
   border-radius: 15px;
   color: white;
@@ -36,14 +28,12 @@ body {
 }
 
 .cards .card p.tip {
-  font-size: 1.8em;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .cards .card p.second-text {
-  font-size: 1em;
   opacity: 0.9;
 }
 
@@ -54,45 +44,6 @@ body {
 .cards:hover>.card:not(:hover) {
   filter: blur(10px);
   transform: scale(0.9, 0.9);
-}
-
-/* Menu skaluje sie do wysokosci okna. --menu-shrink mowi, ilu pikseli brakuje
-   do 900px wysokosci viewportu (maks. 200) - na niskich ekranach (MacBook Air)
-   trzecia karta inaczej wychodzi poza viewport i chowa sie pod Dockiem.
-   Przy wysokosci >= 900px (m.in. przegladarka na 1920x1080) --menu-shrink = 0,
-   wiec wszystkie wartosci sa dokladnie takie jak dotad. */
-@media (min-width: 1024px) {
-  :root {
-    --menu-shrink: clamp(0px, 900px - 100vh, 200px);
-  }
-
-  .cards {
-    gap: calc(15px - var(--menu-shrink) * 0.02);
-  }
-
-  .cards .card {
-    height: calc(160px - var(--menu-shrink) * 0.22);
-  }
-
-  .cards .card p.tip {
-    font-size: calc(1.8rem - var(--menu-shrink) * 0.035);
-  }
-
-  .cards .card p.second-text {
-    font-size: calc(1rem - var(--menu-shrink) * 0.015);
-  }
-}
-
-/* Naglowek i gorny odstep - pelny rozmiar (pt-16 / text-7xl) maja dopiero od xl. */
-@media (min-width: 1280px) {
-  .lobby-pane {
-    padding-top: calc(4rem - var(--menu-shrink) * 0.22);
-  }
-
-  .lobby-title {
-    font-size: calc(4.5rem - var(--menu-shrink) * 0.14);
-    margin-bottom: calc(2.5rem - var(--menu-shrink) * 0.09);
-  }
 }
 
 .form-container {

@@ -145,9 +145,21 @@ export default function Lobby() {
         }
     };
 
+    // Menu skaluje sie do wysokosci okna: --menu-shrink mowi, ilu pikseli brakuje do 900px
+    // wysokosci viewportu (maks. 200). Na niskich ekranach (MacBook Air) trzecia karta inaczej
+    // wychodzi poza viewport i chowa sie pod Dockiem; przy wysokosci >= 900px shrink wynosi 0,
+    // wiec rozmiary sa dokladnie takie jak bazowe.
+    const menuShrink = '[--menu-shrink:0px] lg:[--menu-shrink:clamp(0px,900px_-_100vh,200px)]';
+
+    // W widoku gry panel wypelnia cala wysokosc okna (flex-1 zamiast h-full, ktore
+    // przy min-height rodzica rozwija sie tylko do wysokosci tresci) i centruje plansze.
+    const paneClasses = view === 'game'
+        ? 'flex-1 justify-center pt-2 pb-2'
+        : `justify-start pt-4 md:pt-8 lg:pt-8 xl:pt-[calc(4rem_-_var(--menu-shrink)*0.22)] pb-8 ${view === 'match_history' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'}`;
+
     return (
         <div
-            className={`min-h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
+            className={`min-h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${menuShrink} ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
         >
 
             {}
@@ -201,26 +213,26 @@ export default function Lobby() {
             )}
 
             {}
-            <div className={`flex flex-col items-center justify-start relative w-full ${view === 'match_history' || view === 'game' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'} ${view === 'game' ? 'pt-2 pb-2' : 'lobby-pane pt-4 md:pt-8 lg:pt-8 xl:pt-16 pb-8'}`}>
+            <div className={`flex flex-col items-center relative w-full ${paneClasses}`}>
                 {view !== 'game' && (
-                    <h1 className="lobby-title text-3xl md:text-5xl xl:text-7xl font-black mb-6 lg:mb-10 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
+                    <h1 className="text-3xl md:text-5xl xl:text-[calc(4.5rem_-_var(--menu-shrink)*0.14)] font-black mb-6 lg:mb-10 xl:mb-[calc(2.5rem_-_var(--menu-shrink)*0.09)] text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
                         BATTLESHIP_NET
                     </h1>
                 )}
 
                 {view === 'menu' && (
-                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-4 lg:gap-6 items-center my-auto">
-                        <div className="card red" onClick={() => setView('create')}>
-                            <p className="tip text-xl lg:text-3xl">CREATE ROOM</p>
-                            <p className="second-text text-sm lg:text-base">Start a new battle</p>
+                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-[15px] lg:gap-[calc(15px_-_var(--menu-shrink)*0.02)] items-center my-auto">
+                        <div className="card red h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => setView('create')}>
+                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">CREATE ROOM</p>
+                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">Start a new battle</p>
                         </div>
-                        <div className="card blue" onClick={() => { setView('join'); setGameCode(''); }}>
-                            <p className="tip text-xl lg:text-3xl">JOIN ROOM</p>
-                            <p className="second-text text-sm lg:text-base">Enter existing code</p>
+                        <div className="card blue h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => { setView('join'); setGameCode(''); }}>
+                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">JOIN ROOM</p>
+                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">Enter existing code</p>
                         </div>
-                        <div className="card green" onClick={() => navigate('/match_history')}>
-                            <p className="tip text-xl lg:text-3xl">MATCH HISTORY</p>
-                            <p className="second-text text-sm lg:text-base">See full records</p>
+                        <div className="card green h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => navigate('/match_history')}>
+                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">MATCH HISTORY</p>
+                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">See full records</p>
                         </div>
                     </div>
                 )}
