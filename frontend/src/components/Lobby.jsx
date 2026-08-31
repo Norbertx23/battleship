@@ -281,7 +281,7 @@ export default function Lobby() {
                     <div className="mt-8 p-6 border-2 border-[#00f2ea] bg-[#00f2ea11] rounded text-center w-full max-w-sm cyber-panel">
                         <p className="text-[#00f2ea] text-sm tracking-widest mb-4">SERVER_INITIALIZED</p>
                         <div className="flex justify-center">
-                            <CodeField code={roomCode} textClassName="text-3xl md:text-4xl" />
+                            <CodeField code={roomCode} revealable textClassName="text-3xl md:text-4xl" />
                         </div>
                         <p className="text-gray-500 text-xs mt-4 animate-pulse">WAITING_FOR_PEER_CONNECTION...</p>
                         <button onClick={handleBack} className="mt-6 text-xs text-gray-500 hover:text-white">CANCEL</button>
