@@ -9,14 +9,14 @@ const socket = io(window.location.origin, {
 });
 
 const ShipSelector = ({ masts, count, onChange }) => (
-    <div className="flex flex-col gap-1 mb-2">
+    <div className="flex flex-col gap-1 mb-2 lg:gap-[calc(0.25rem_-_var(--menu-shrink)*0.01)] lg:mb-[calc(0.5rem_-_var(--menu-shrink)*0.015)]">
         <div className="flex justify-between items-center text-xs text-[#00f2ea]">
             <span>{masts}-MAST SHIP</span>
             <span>COUNT: <span className="text-white font-bold">{count}</span></span>
         </div>
         <div className="radio-input self-center">
             {[0, 1, 2, 3, 4, 5].map(val => (
-                <label key={val}>
+                <label key={val} className="lg:py-[calc(0.25rem_-_var(--menu-shrink)*0.01)]!">
                     <input
                         type="radio"
                         name={`ship-${masts}`}
@@ -151,11 +151,15 @@ export default function Lobby() {
     // wiec rozmiary sa dokladnie takie jak bazowe.
     const menuShrink = '[--menu-shrink:0px] lg:[--menu-shrink:clamp(0px,900px_-_100vh,200px)]';
 
+    const formCentering = view === 'create' || view === 'join' || view === 'room_created'
+        ? 'lg:pb-30 xl:pb-[calc(11rem_-_var(--menu-shrink)*0.45)]'
+        : '';
+
     // W widoku gry panel wypelnia cala wysokosc okna (flex-1 zamiast h-full, ktore
     // przy min-height rodzica rozwija sie tylko do wysokosci tresci) i centruje plansze.
     const paneClasses = view === 'game'
         ? 'flex-1 justify-center pt-2 pb-2'
-        : `justify-start pt-4 md:pt-8 lg:pt-8 xl:pt-[calc(4rem_-_var(--menu-shrink)*0.22)] pb-8 ${view === 'match_history' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'}`;
+        : `justify-start pt-4 md:pt-8 lg:pt-8 xl:pt-[calc(4rem_-_var(--menu-shrink)*0.22)] pb-8 ${formCentering} ${view === 'match_history' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'}`;
 
     return (
         <div
@@ -238,22 +242,22 @@ export default function Lobby() {
                 )}
 
                 {(view === 'create' || view === 'join') && (
-                    <div className="w-full max-w-xs lg:max-w-md flex flex-col justify-center">
-                        <button onClick={handleBack} className="mb-4 text-[#00f2ea] hover:underline flex items-center gap-2">
+                    <div className="w-full max-w-xs lg:max-w-md flex flex-col justify-center my-auto">
+                        <button onClick={handleBack} className="mb-4 lg:mb-[calc(1rem_-_var(--menu-shrink)*0.01)] text-[#00f2ea] hover:underline flex items-center gap-2">
                             &larr; ABORT SEQUENCE
                         </button>
 
-                        <div className="form-container">
-                            <form className="form" onSubmit={(e) => e.preventDefault()}>
+                        <div className="form-container lg:py-[calc(2rem_-_var(--menu-shrink)*0.06)]!">
+                            <form className="form lg:gap-[calc(0.875rem_-_var(--menu-shrink)*0.02)]!" onSubmit={(e) => e.preventDefault()}>
                                 <div className="form-group">
                                     <label htmlFor="nick">CODENAME</label>
-                                    <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Enter your identity" />
+                                    <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Enter your identity" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
                                 </div>
 
                                 {view === 'create' && (
                                     <>
-                                        <div className="border-t border-[#414141] mt-2 pt-2">
-                                            <p className="text-[#00f2ea] text-xs font-bold mb-3 tracking-widest text-center">FLEET CONFIGURATION</p>
+                                        <div className="border-t border-[#414141] mt-2 pt-2 lg:mt-[calc(0.5rem_-_var(--menu-shrink)*0.01)] lg:pt-[calc(0.5rem_-_var(--menu-shrink)*0.01)]">
+                                            <p className="text-[#00f2ea] text-xs font-bold mb-3 lg:mb-[calc(0.75rem_-_var(--menu-shrink)*0.02)] tracking-widest text-center">FLEET CONFIGURATION</p>
                                             <ShipSelector masts="4" count={shipConfig["4"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
                                             <ShipSelector masts="3" count={shipConfig["3"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
                                             <ShipSelector masts="2" count={shipConfig["2"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
@@ -265,11 +269,11 @@ export default function Lobby() {
                                 {view === 'join' && (
                                     <div className="form-group">
                                         <label htmlFor="room">SECURE ROOM ID</label>
-                                        <input type="text" id="room" name="room" required value={gameCode} onChange={(e) => setGameCode(e.target.value)} placeholder="Enter access code" />
+                                        <input type="text" id="room" name="room" required value={gameCode} onChange={(e) => setGameCode(e.target.value)} placeholder="Enter access code" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
                                     </div>
                                 )}
 
-                                <button className="form-submit-btn" type="submit" onClick={handleAction}>
+                                <button className="form-submit-btn lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" type="submit" onClick={handleAction}>
                                     {view === 'create' ? "INITIALIZE MISSION" : "ESTABLISH CONNECTION"}
                                 </button>
                             </form>
@@ -278,7 +282,7 @@ export default function Lobby() {
                 )}
 
                 {view === 'room_created' && (
-                    <div className="mt-8 p-6 border-2 border-[#00f2ea] bg-[#00f2ea11] rounded text-center w-full max-w-sm cyber-panel">
+                    <div className="my-auto p-6 lg:p-[calc(1.5rem_-_var(--menu-shrink)*0.02)] border-2 border-[#00f2ea] bg-[#00f2ea11] rounded text-center w-full max-w-sm cyber-panel">
                         <p className="text-[#00f2ea] text-sm tracking-widest mb-4">SERVER_INITIALIZED</p>
                         <div className="flex justify-center">
                             <CodeField code={roomCode} revealable textClassName="text-3xl md:text-4xl" />
