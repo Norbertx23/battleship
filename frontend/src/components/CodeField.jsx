@@ -29,7 +29,7 @@ const CheckIcon = () => (
     </svg>
 );
 
-export default function CodeField({ code, revealable = false, textClassName = 'text-lg' }) {
+export default function CodeField({ code, revealable = false, textClassName = 'text-lg', hidenCode = "******" }) {
     const [revealed, setRevealed] = useState(!revealable);
     const [copied, setCopied] = useState(false);
 
@@ -59,7 +59,7 @@ export default function CodeField({ code, revealable = false, textClassName = 't
     return (
         <div className="inline-flex items-center justify-center gap-3 border border-[#00f2ea55] rounded px-3 py-2 bg-[#00000055]">
             <span className={`font-mono font-bold tracking-widest text-white select-all ${textClassName}`}>
-                {revealed ? code : '******'}
+                {revealed ? code : hidenCode}
             </span>
             {revealable && (
                 <button
