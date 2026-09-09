@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
+import useLobbySocket from '../hooks/useLobbySocket';
 import GameBoard from './GameBoard';
 import CodeField from './CodeField';
-
-const socket = io(window.location.origin, {
-    path: "/api/socket.io",
-});
 
 const ShipSelector = ({ masts, count, onChange }) => (
     <div className="flex flex-col gap-1 mb-2 lg:gap-[calc(0.25rem_-_var(--menu-shrink)*0.01)] lg:mb-[calc(0.5rem_-_var(--menu-shrink)*0.015)]">
@@ -38,16 +34,25 @@ const ShipSelector = ({ masts, count, onChange }) => (
 export default function Lobby() {
     const navigate = useNavigate();
 
+    const {
+        socket,
+        view,
+        setView,
+        nick,
+        setNick,
+        gameCode,
+        setGameCode,
+        roomCode,
+        shipConfig,
+        setShipConfig,
+        resumeState,
+        createRoom,
+        joinRoom,
+        leaveRoom,
+    } = useLobbySocket();
+
     const [topPlayers, setTopPlayers] = useState([]);
     const [recentMatches, setRecentMatches] = useState([]);
-
-    const [view, setView] = useState('menu');
-
-    const [nick, setNick] = useState("Player_" + Math.floor(Math.random() * 1000));
-    const [gameCode, setGameCode] = useState("");
-    const [roomCode, setRoomCode] = useState("");
-    const [shipConfig, setShipConfig] = useState({ "4": 1, "3": 2, "2": 2, "1": 4 });
-    const [resumeState, setResumeState] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -69,63 +74,7 @@ export default function Lobby() {
         window.scrollTo(0, 0);
     }, [view]);
 
-    useEffect(() => {
-
-        socket.on('session', (data) => {
-            if (data.room_id && data.token) {
-                localStorage.setItem('bs_token_' + data.room_id, data.token);
-            }
-        });
-        socket.on('room_created', (data) => {
-            console.log("Room Created Event Received:", data);
-            setRoomCode(data.room_id);
-            setView('room_created');
-        });
-        socket.on('game_start', (data) => {
-            console.log("GAME STARTED! Config:", data.config);
-            setResumeState(null);
-            setShipConfig(data.config);
-            setView('game');
-        });
-        socket.on('game_resumed', (data) => {
-            console.log("GAME RESUMED!", data);
-            setResumeState(data);
-            setShipConfig(data.config);
-            setRoomCode(data.room_id);
-            setGameCode(data.room_id);
-            if (data.nick) setNick(data.nick);
-            setView('game');
-        });
-        socket.on('error', (d) => alert(d.message));
-        socket.on('player_disconnected', (d) => {
-            if (view !== 'menu' && !d.silent) {
-                alert("SIGNAL LOST: " + d.message + "\nReturning to Lobby.");
-                setView('menu');
-                setRoomCode("");
-            }
-        });
-
-        return () => {
-            socket.off('session');
-            socket.off('room_created');
-            socket.off('game_start');
-            socket.off('game_resumed');
-            socket.off('error');
-            socket.off('player_disconnected');
-        }
-    }, []);
-
-    const handleBack = () => {
-        const activeRoom = roomCode || gameCode;
-        if (activeRoom) {
-            socket.emit('leave_room', { room_id: activeRoom });
-            localStorage.removeItem('bs_token_' + activeRoom);
-        }
-        setView('menu');
-        setRoomCode("");
-        setGameCode("");
-        setResumeState(null);
-    };
+    const handleBack = () => leaveRoom();
 
     const handleAction = () => {
         console.log("Handle Action Triggered. View:", view);
@@ -133,16 +82,8 @@ export default function Lobby() {
 
         if (!nick) return alert("IDENTITY REQUIRED");
 
-        if (view === 'join') {
-            const code = gameCode.trim().toUpperCase();
-            setGameCode(code);
-            const token = localStorage.getItem('bs_token_' + code) || undefined;
-            socket.emit('join_room', { room_id: code, nick, config: {}, token });
-        }
-        else {
-            console.log("Creating room with ship config:", shipConfig);
-            socket.emit('create_room', { nick, config: shipConfig });
-        }
+        if (view === 'join') joinRoom();
+        else createRoom();
     };
 
     // Menu skaluje sie do wysokosci okna: --menu-shrink mowi, ilu pikseli brakuje do 900px
