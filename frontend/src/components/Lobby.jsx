@@ -40,6 +40,7 @@ export default function Lobby() {
         setView,
         nick,
         setNick,
+        guestNick,
         gameCode,
         setGameCode,
         roomCode,
@@ -104,7 +105,7 @@ export default function Lobby() {
 
     return (
         <div
-            className={`min-h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${menuShrink} ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
+            className={`min-h-screen w-full bg-linear-to-b from-[#020617] to-[#020617] text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${menuShrink} ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
         >
 
             {}
@@ -192,7 +193,7 @@ export default function Lobby() {
                             <form className="form lg:gap-[calc(0.875rem_-_var(--menu-shrink)*0.02)]!" onSubmit={(e) => e.preventDefault()}>
                                 <div className="form-group">
                                     <label htmlFor="nick">CODENAME</label>
-                                    <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Enter your identity" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
+                                    <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} onBlur={() => !nick.trim() && setNick(guestNick)} placeholder="Enter your identity" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
                                 </div>
 
                                 {view === 'create' && (

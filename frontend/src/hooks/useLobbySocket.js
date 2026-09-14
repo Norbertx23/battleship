@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSocket from './useSocket';
+import { useLocalStorage } from './useLocalStorage';
 
 export default function useLobbySocket() {
     const socket = useSocket();
 
     const [view, setView] = useState('menu');
-    const [nick, setNick] = useState(() => 'Player_' + Math.floor(Math.random() * 1000));
+    const [guestNick] = useState(() => 'Player_' + Math.floor(Math.random() * 1000));
+    const [nick, setNick] = useLocalStorage('bs_nick', guestNick);
     const [gameCode, setGameCode] = useState('');
     const [roomCode, setRoomCode] = useState('');
     const [shipConfig, setShipConfig] = useState({ '4': 1, '3': 2, '2': 2, '1': 4 });
@@ -67,7 +69,7 @@ export default function useLobbySocket() {
             socket.off('error', handleError);
             socket.off('player_disconnected', handlePlayerDisconnected);
         };
-    }, [socket]);
+    }, [socket, setNick]);
 
     const createRoom = useCallback(() => {
         console.log('Creating room with ship config:', shipConfig);
@@ -99,6 +101,7 @@ export default function useLobbySocket() {
         setView,
         nick,
         setNick,
+        guestNick,
         gameCode,
         setGameCode,
         roomCode,
