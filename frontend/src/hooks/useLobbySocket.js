@@ -12,17 +12,28 @@ export default function useLobbySocket() {
     const [roomCode, setRoomCode] = useState('');
     const [shipConfig, setShipConfig] = useState({ '4': 1, '3': 2, '2': 2, '1': 4 });
     const [resumeState, setResumeState] = useState(null);
+    const [resumeKey, setResumeKey] = useState(0);
 
     const viewRef = useRef(view);
+    const activeRoomRef = useRef('');
+    const nickRef = useRef(nick);
 
     useEffect(() => {
         viewRef.current = view;
     }, [view]);
 
     useEffect(() => {
+        activeRoomRef.current = roomCode || gameCode;
+    }, [roomCode, gameCode]);
+
+    useEffect(() => {
+        nickRef.current = nick;
+    }, [nick]);
+
+    useEffect(() => {
         const handleSession = (data) => {
             if (data.room_id && data.token) {
-                localStorage.setItem('bs_token_' + data.room_id, data.token);
+                sessionStorage.setItem('bs_token_' + data.room_id, data.token);
             }
         };
         const handleRoomCreated = (data) => {
@@ -38,12 +49,35 @@ export default function useLobbySocket() {
         };
         const handleGameResumed = (data) => {
             console.log('GAME RESUMED!', data);
-            setResumeState(data);
             setShipConfig(data.config);
             setRoomCode(data.room_id);
             setGameCode(data.room_id);
             if (data.nick) setNick(data.nick);
+            if (data.phase === 'lobby') {
+                setResumeState(null);
+                setView('room_created');
+                return;
+            }
+            setResumeState(data);
+            setResumeKey(prev => prev + 1);
             setView('game');
+        };
+        const handleConnect = () => {
+            const activeRoom = activeRoomRef.current;
+            if (viewRef.current === 'menu' || !activeRoom) return;
+            const token = sessionStorage.getItem('bs_token_' + activeRoom);
+            if (!token) return;
+            console.log('Reconnected - rejoining room', activeRoom);
+            socket.emit('join_room', { room_id: activeRoom, nick: nickRef.current, config: {}, token, rejoin: true });
+        };
+        const handleRejoinFailed = (data) => {
+            const activeRoom = activeRoomRef.current;
+            if (activeRoom) sessionStorage.removeItem('bs_token_' + activeRoom);
+            alert('SIGNAL LOST: ' + data.message + '\nReturning to Lobby.');
+            setResumeState(null);
+            setRoomCode('');
+            setGameCode('');
+            setView('menu');
         };
         const handleError = (data) => alert(data.message);
         const handlePlayerDisconnected = (data) => {
@@ -54,6 +88,8 @@ export default function useLobbySocket() {
             }
         };
 
+        socket.on('connect', handleConnect);
+        socket.on('rejoin_failed', handleRejoinFailed);
         socket.on('session', handleSession);
         socket.on('room_created', handleRoomCreated);
         socket.on('game_start', handleGameStart);
@@ -62,6 +98,8 @@ export default function useLobbySocket() {
         socket.on('player_disconnected', handlePlayerDisconnected);
 
         return () => {
+            socket.off('connect', handleConnect);
+            socket.off('rejoin_failed', handleRejoinFailed);
             socket.off('session', handleSession);
             socket.off('room_created', handleRoomCreated);
             socket.off('game_start', handleGameStart);
@@ -79,7 +117,7 @@ export default function useLobbySocket() {
     const joinRoom = useCallback(() => {
         const code = gameCode.trim().toUpperCase();
         setGameCode(code);
-        const token = localStorage.getItem('bs_token_' + code) || undefined;
+        const token = sessionStorage.getItem('bs_token_' + code) || undefined;
         socket.emit('join_room', { room_id: code, nick, config: {}, token });
     }, [socket, gameCode, nick]);
 
@@ -87,7 +125,7 @@ export default function useLobbySocket() {
         const activeRoom = roomCode || gameCode;
         if (activeRoom) {
             socket.emit('leave_room', { room_id: activeRoom });
-            localStorage.removeItem('bs_token_' + activeRoom);
+            sessionStorage.removeItem('bs_token_' + activeRoom);
         }
         setView('menu');
         setRoomCode('');
@@ -108,6 +146,7 @@ export default function useLobbySocket() {
         shipConfig,
         setShipConfig,
         resumeState,
+        resumeKey,
         createRoom,
         joinRoom,
         leaveRoom,

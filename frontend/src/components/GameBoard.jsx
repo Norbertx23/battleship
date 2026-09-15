@@ -36,7 +36,7 @@ const boardFromShots = (shots) => {
 };
 
 export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, resumeState }) {
-    const [phase, setPhase] = useState(() => resumeState ? 'battle' : 'placement');
+    const [phase, setPhase] = useState(() => (resumeState && resumeState.phase) ? resumeState.phase : (resumeState ? 'battle' : 'placement'));
     const [myShips, setMyShips] = useState(() => resumeState ? resumeShipsToOverlay(resumeState.my_ships) : []);
     const [myBoard, setMyBoard] = useState(() => resumeState ? boardFromShots(resumeState.enemy_shots) : createEmptyBoard());
     const [enemyBoard, setEnemyBoard] = useState(() => resumeState ? boardFromShots(resumeState.my_shots) : createEmptyBoard());
@@ -178,7 +178,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             setPhase('game_over');
             setResult(data.winner === socket.id ? 'VICTORY' : 'DEFEAT');
             if (data.enemy_ships) setEnemyShips(data.enemy_ships);
-            if (roomCode) localStorage.removeItem('bs_token_' + roomCode);
+            if (roomCode) sessionStorage.removeItem('bs_token_' + roomCode);
         });
         socket.on('opponent_disconnected', (data) => {
             setGraceInfo({ nick: data.nick, secondsLeft: data.grace || 60 });

@@ -47,6 +47,7 @@ export default function Lobby() {
         shipConfig,
         setShipConfig,
         resumeState,
+        resumeKey,
         createRoom,
         joinRoom,
         leaveRoom,
@@ -236,6 +237,7 @@ export default function Lobby() {
 
                 {view === 'game' && (
                     <GameBoard
+                        key={resumeKey}
                         socket={socket}
                         roomCode={roomCode || gameCode}
                         shipConfig={shipConfig}
