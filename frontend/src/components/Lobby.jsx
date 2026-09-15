@@ -1,22 +1,18 @@
 import { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
+import useLobbySocket from '../hooks/useLobbySocket';
 import GameBoard from './GameBoard';
 import CodeField from './CodeField';
 
-const socket = io(window.location.origin, {
-    path: "/api/socket.io",
-});
-
 const ShipSelector = ({ masts, count, onChange }) => (
-    <div className="flex flex-col gap-1 mb-2">
+    <div className="flex flex-col gap-1 mb-2 lg:gap-[calc(0.25rem_-_var(--menu-shrink)*0.01)] lg:mb-[calc(0.5rem_-_var(--menu-shrink)*0.015)]">
         <div className="flex justify-between items-center text-xs text-[#00f2ea]">
             <span>{masts}-MAST SHIP</span>
             <span>COUNT: <span className="text-white font-bold">{count}</span></span>
         </div>
         <div className="radio-input self-center">
             {[0, 1, 2, 3, 4, 5].map(val => (
-                <label key={val}>
+                <label key={val} className="lg:py-[calc(0.25rem_-_var(--menu-shrink)*0.01)]!">
                     <input
                         type="radio"
                         name={`ship-${masts}`}
@@ -38,16 +34,27 @@ const ShipSelector = ({ masts, count, onChange }) => (
 export default function Lobby() {
     const navigate = useNavigate();
 
+    const {
+        socket,
+        view,
+        setView,
+        nick,
+        setNick,
+        guestNick,
+        gameCode,
+        setGameCode,
+        roomCode,
+        shipConfig,
+        setShipConfig,
+        resumeState,
+        resumeKey,
+        createRoom,
+        joinRoom,
+        leaveRoom,
+    } = useLobbySocket();
+
     const [topPlayers, setTopPlayers] = useState([]);
     const [recentMatches, setRecentMatches] = useState([]);
-
-    const [view, setView] = useState('menu');
-
-    const [nick, setNick] = useState("Player_" + Math.floor(Math.random() * 1000));
-    const [gameCode, setGameCode] = useState("");
-    const [roomCode, setRoomCode] = useState("");
-    const [shipConfig, setShipConfig] = useState({ "4": 1, "3": 2, "2": 2, "1": 4 });
-    const [resumeState, setResumeState] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -69,63 +76,7 @@ export default function Lobby() {
         window.scrollTo(0, 0);
     }, [view]);
 
-    useEffect(() => {
-
-        socket.on('session', (data) => {
-            if (data.room_id && data.token) {
-                localStorage.setItem('bs_token_' + data.room_id, data.token);
-            }
-        });
-        socket.on('room_created', (data) => {
-            console.log("Room Created Event Received:", data);
-            setRoomCode(data.room_id);
-            setView('room_created');
-        });
-        socket.on('game_start', (data) => {
-            console.log("GAME STARTED! Config:", data.config);
-            setResumeState(null);
-            setShipConfig(data.config);
-            setView('game');
-        });
-        socket.on('game_resumed', (data) => {
-            console.log("GAME RESUMED!", data);
-            setResumeState(data);
-            setShipConfig(data.config);
-            setRoomCode(data.room_id);
-            setGameCode(data.room_id);
-            if (data.nick) setNick(data.nick);
-            setView('game');
-        });
-        socket.on('error', (d) => alert(d.message));
-        socket.on('player_disconnected', (d) => {
-            if (view !== 'menu' && !d.silent) {
-                alert("SIGNAL LOST: " + d.message + "\nReturning to Lobby.");
-                setView('menu');
-                setRoomCode("");
-            }
-        });
-
-        return () => {
-            socket.off('session');
-            socket.off('room_created');
-            socket.off('game_start');
-            socket.off('game_resumed');
-            socket.off('error');
-            socket.off('player_disconnected');
-        }
-    }, []);
-
-    const handleBack = () => {
-        const activeRoom = roomCode || gameCode;
-        if (activeRoom) {
-            socket.emit('leave_room', { room_id: activeRoom });
-            localStorage.removeItem('bs_token_' + activeRoom);
-        }
-        setView('menu');
-        setRoomCode("");
-        setGameCode("");
-        setResumeState(null);
-    };
+    const handleBack = () => leaveRoom();
 
     const handleAction = () => {
         console.log("Handle Action Triggered. View:", view);
@@ -133,21 +84,29 @@ export default function Lobby() {
 
         if (!nick) return alert("IDENTITY REQUIRED");
 
-        if (view === 'join') {
-            const code = gameCode.trim().toUpperCase();
-            setGameCode(code);
-            const token = localStorage.getItem('bs_token_' + code) || undefined;
-            socket.emit('join_room', { room_id: code, nick, config: {}, token });
-        }
-        else {
-            console.log("Creating room with ship config:", shipConfig);
-            socket.emit('create_room', { nick, config: shipConfig });
-        }
+        if (view === 'join') joinRoom();
+        else createRoom();
     };
+
+    // Menu skaluje sie do wysokosci okna: --menu-shrink mowi, ilu pikseli brakuje do 900px
+    // wysokosci viewportu (maks. 200). Na niskich ekranach (MacBook Air) trzecia karta inaczej
+    // wychodzi poza viewport i chowa sie pod Dockiem; przy wysokosci >= 900px shrink wynosi 0,
+    // wiec rozmiary sa dokladnie takie jak bazowe.
+    const menuShrink = '[--menu-shrink:0px] lg:[--menu-shrink:clamp(0px,900px_-_100vh,200px)]';
+
+    const formCentering = view === 'create' || view === 'join' || view === 'room_created'
+        ? 'lg:pb-30 xl:pb-[calc(11rem_-_var(--menu-shrink)*0.45)]'
+        : '';
+
+    // W widoku gry panel wypelnia cala wysokosc okna (flex-1 zamiast h-full, ktore
+    // przy min-height rodzica rozwija sie tylko do wysokosci tresci) i centruje plansze.
+    const paneClasses = view === 'game'
+        ? 'flex-1 justify-center pt-2 pb-2'
+        : `justify-start pt-4 md:pt-8 lg:pt-8 xl:pt-[calc(4rem_-_var(--menu-shrink)*0.22)] pb-8 ${formCentering} ${view === 'match_history' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'}`;
 
     return (
         <div
-            className={`min-h-screen w-full text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
+            className={`min-h-screen w-full bg-linear-to-b from-[#020617] to-[#020617] text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${menuShrink} ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
         >
 
             {}
@@ -201,47 +160,47 @@ export default function Lobby() {
             )}
 
             {}
-            <div className={`flex flex-col items-center justify-start relative w-full ${view === 'match_history' || view === 'game' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'} ${view === 'game' ? 'pt-2 pb-2' : 'lobby-pane pt-4 md:pt-8 lg:pt-8 xl:pt-16 pb-8'}`}>
+            <div className={`flex flex-col items-center relative w-full ${paneClasses}`}>
                 {view !== 'game' && (
-                    <h1 className="lobby-title text-3xl md:text-5xl xl:text-7xl font-black mb-6 lg:mb-10 text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
+                    <h1 className="text-3xl md:text-5xl xl:text-[calc(4.5rem_-_var(--menu-shrink)*0.14)] font-black mb-6 lg:mb-10 xl:mb-[calc(2.5rem_-_var(--menu-shrink)*0.09)] text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
                         BATTLESHIP_NET
                     </h1>
                 )}
 
                 {view === 'menu' && (
-                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-4 lg:gap-6 items-center my-auto">
-                        <div className="card red" onClick={() => setView('create')}>
-                            <p className="tip text-xl lg:text-3xl">CREATE ROOM</p>
-                            <p className="second-text text-sm lg:text-base">Start a new battle</p>
+                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-[15px] lg:gap-[calc(15px_-_var(--menu-shrink)*0.02)] items-center my-auto">
+                        <div className="card red h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => setView('create')}>
+                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">CREATE ROOM</p>
+                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">Start a new battle</p>
                         </div>
-                        <div className="card blue" onClick={() => { setView('join'); setGameCode(''); }}>
-                            <p className="tip text-xl lg:text-3xl">JOIN ROOM</p>
-                            <p className="second-text text-sm lg:text-base">Enter existing code</p>
+                        <div className="card blue h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => { setView('join'); setGameCode(''); }}>
+                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">JOIN ROOM</p>
+                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">Enter existing code</p>
                         </div>
-                        <div className="card green" onClick={() => navigate('/match_history')}>
-                            <p className="tip text-xl lg:text-3xl">MATCH HISTORY</p>
-                            <p className="second-text text-sm lg:text-base">See full records</p>
+                        <div className="card green h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => navigate('/match_history')}>
+                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">MATCH HISTORY</p>
+                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">See full records</p>
                         </div>
                     </div>
                 )}
 
                 {(view === 'create' || view === 'join') && (
-                    <div className="w-full max-w-xs lg:max-w-md flex flex-col justify-center">
-                        <button onClick={handleBack} className="mb-4 text-[#00f2ea] hover:underline flex items-center gap-2">
+                    <div className="w-full max-w-xs lg:max-w-md flex flex-col justify-center my-auto">
+                        <button onClick={handleBack} className="mb-4 lg:mb-[calc(1rem_-_var(--menu-shrink)*0.01)] text-[#00f2ea] hover:underline flex items-center gap-2">
                             &larr; ABORT SEQUENCE
                         </button>
 
-                        <div className="form-container">
-                            <form className="form" onSubmit={(e) => e.preventDefault()}>
+                        <div className="form-container lg:py-[calc(2rem_-_var(--menu-shrink)*0.06)]!">
+                            <form className="form lg:gap-[calc(0.875rem_-_var(--menu-shrink)*0.02)]!" onSubmit={(e) => e.preventDefault()}>
                                 <div className="form-group">
                                     <label htmlFor="nick">CODENAME</label>
-                                    <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Enter your identity" />
+                                    <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} onBlur={() => !nick.trim() && setNick(guestNick)} placeholder="Enter your identity" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
                                 </div>
 
                                 {view === 'create' && (
                                     <>
-                                        <div className="border-t border-[#414141] mt-2 pt-2">
-                                            <p className="text-[#00f2ea] text-xs font-bold mb-3 tracking-widest text-center">FLEET CONFIGURATION</p>
+                                        <div className="border-t border-[#414141] mt-2 pt-2 lg:mt-[calc(0.5rem_-_var(--menu-shrink)*0.01)] lg:pt-[calc(0.5rem_-_var(--menu-shrink)*0.01)]">
+                                            <p className="text-[#00f2ea] text-xs font-bold mb-3 lg:mb-[calc(0.75rem_-_var(--menu-shrink)*0.02)] tracking-widest text-center">FLEET CONFIGURATION</p>
                                             <ShipSelector masts="4" count={shipConfig["4"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
                                             <ShipSelector masts="3" count={shipConfig["3"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
                                             <ShipSelector masts="2" count={shipConfig["2"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
@@ -253,11 +212,11 @@ export default function Lobby() {
                                 {view === 'join' && (
                                     <div className="form-group">
                                         <label htmlFor="room">SECURE ROOM ID</label>
-                                        <input type="text" id="room" name="room" required value={gameCode} onChange={(e) => setGameCode(e.target.value)} placeholder="Enter access code" />
+                                        <input type="text" id="room" name="room" required value={gameCode} onChange={(e) => setGameCode(e.target.value)} placeholder="Enter access code" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
                                     </div>
                                 )}
 
-                                <button className="form-submit-btn" type="submit" onClick={handleAction}>
+                                <button className="form-submit-btn lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" type="submit" onClick={handleAction}>
                                     {view === 'create' ? "INITIALIZE MISSION" : "ESTABLISH CONNECTION"}
                                 </button>
                             </form>
@@ -266,10 +225,10 @@ export default function Lobby() {
                 )}
 
                 {view === 'room_created' && (
-                    <div className="mt-8 p-6 border-2 border-[#00f2ea] bg-[#00f2ea11] rounded text-center w-full max-w-sm cyber-panel">
+                    <div className="my-auto p-6 lg:p-[calc(1.5rem_-_var(--menu-shrink)*0.02)] border-2 border-[#00f2ea] bg-[#00f2ea11] rounded text-center w-full max-w-sm cyber-panel">
                         <p className="text-[#00f2ea] text-sm tracking-widest mb-4">SERVER_INITIALIZED</p>
                         <div className="flex justify-center">
-                            <CodeField code={roomCode} textClassName="text-3xl md:text-4xl" />
+                            <CodeField code={roomCode} revealable textClassName="text-3xl md:text-4xl" />
                         </div>
                         <p className="text-gray-500 text-xs mt-4 animate-pulse">WAITING_FOR_PEER_CONNECTION...</p>
                         <button onClick={handleBack} className="mt-6 text-xs text-gray-500 hover:text-white">CANCEL</button>
@@ -278,6 +237,7 @@ export default function Lobby() {
 
                 {view === 'game' && (
                     <GameBoard
+                        key={resumeKey}
                         socket={socket}
                         roomCode={roomCode || gameCode}
                         shipConfig={shipConfig}

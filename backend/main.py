@@ -29,6 +29,7 @@ app = socketio.ASGIApp(sio, fastapi_app)
 rooms = {}
 
 GRACE_PERIOD = 60
+LOBBY_GRACE_PERIOD = 180
 
 @sio.event
 async def connect(sid, environ):
@@ -61,15 +62,56 @@ def migrate_sid(room_data, old_sid, new_sid):
         room_data['host'] = new_sid
 
 
+def purge_player(room_data, sid):
+    room_data['players'].pop(sid, None)
+    room_data.get('boards', {}).pop(sid, None)
+    room_data.get('shots', {}).pop(sid, None)
+    room_data.get('tokens', {}).pop(sid, None)
+    if 'ready' in room_data:
+        room_data['ready'] = [s for s in room_data['ready'] if s != sid]
+
+
+def find_token_owner(room_data, token, allow_active):
+    """Szuka gracza, do ktorego nalezy token.
+
+    allow_active dopuszcza tez gracza wciaz widocznego jako polaczony - tak jest
+    przy automatycznym powrocie, gdy serwer nie zdazyl jeszcze zauwazyc zerwanego
+    polaczenia. Reczne dolaczenie kodem nigdy nie przejmuje aktywnej sesji.
+    """
+    if not token or room_data.get('status') == 'finished':
+        return None
+    pending = room_data.get('pending', {})
+    for owner, owner_token in room_data.get('tokens', {}).items():
+        if owner_token != token:
+            continue
+        if owner in pending or (allow_active and owner in room_data['players']):
+            return owner
+    return None
+
+
+def resume_phase(room_data, sid):
+    if room_data.get('status') == 'playing':
+        return 'battle'
+    if len(room_data['players']) < 2:
+        return 'lobby'
+    return 'waiting' if sid in room_data.get('ready', []) else 'placement'
+
+
+async def fail_join(sid, message, is_rejoin):
+    event = 'rejoin_failed' if is_rejoin else 'error'
+    await sio.emit(event, {'message': message}, to=sid)
+
+
 async def handle_leave(sid, room_id):
     if room_id in rooms:
         room_data = rooms[room_id]
         if sid in room_data['players']:
             leaving_nick = room_data['players'][sid]
-            del room_data['players'][sid]
+            leaving_ships = room_data.get('boards', {}).get(sid, [])
+            purge_player(room_data, sid)
             print(f"Player {sid} ({leaving_nick}) left room {room_id}")
 
-            if room_data.get('pending'):
+            if room_data.get('pending') and room_data.get('status') == 'playing':
                 cancel_pending(room_data)
                 del rooms[room_id]
                 print(f"Room {room_id} deleted (both players gone)")
@@ -90,7 +132,7 @@ async def handle_leave(sid, room_id):
                 elif current_status == 'playing':
                     room_data['status'] = 'finished'
                     save_match_to_db(remaining_nick, leaving_nick, remaining_nick)
-                    await sio.emit('game_over', {'winner': remaining_sid, 'enemy_ships': room_data['boards'].get(sid, [])}, room=room_id)
+                    await sio.emit('game_over', {'winner': remaining_sid, 'enemy_ships': leaving_ships}, room=room_id)
                     await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
                 else:
                     await sio.emit('player_disconnected', {'message': f'Player {leaving_nick} left the room.'}, room=room_id)
@@ -125,9 +167,26 @@ async def do_forfeit(room_id, leaver_sid, leaver_nick):
     await sio.emit('player_disconnected', {'message': f'Opponent {leaver_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
 
 
-async def grace_timeout(room_id, leaver_sid, leaver_nick):
+async def do_lobby_leave(room_id, leaver_sid, leaver_nick):
+    room_data = rooms.get(room_id)
+    if not room_data:
+        return
+    purge_player(room_data, leaver_sid)
+
+    remaining = list(room_data['players'].keys())
+    pending = room_data.get('pending', {})
+    if not remaining or all(s in pending for s in remaining):
+        cancel_pending(room_data)
+        rooms.pop(room_id, None)
+        print(f"Room {room_id} deleted (nobody left in lobby)")
+        return
+
+    await sio.emit('player_disconnected', {'message': f'Player {leaver_nick} left the room.'}, room=room_id)
+
+
+async def grace_timeout(room_id, leaver_sid, leaver_nick, period):
     try:
-        await asyncio.sleep(GRACE_PERIOD)
+        await asyncio.sleep(period)
     except asyncio.CancelledError:
         return
     room_data = rooms.get(room_id)
@@ -137,8 +196,12 @@ async def grace_timeout(room_id, leaver_sid, leaver_nick):
     if leaver_sid not in pending:
         return
     del pending[leaver_sid]
-    print(f"Grace expired for {leaver_nick} in {room_id} - forfeit")
-    await do_forfeit(room_id, leaver_sid, leaver_nick)
+    if room_data.get('status') == 'playing':
+        print(f"Grace expired for {leaver_nick} in {room_id} - forfeit")
+        await do_forfeit(room_id, leaver_sid, leaver_nick)
+    else:
+        print(f"Grace expired for {leaver_nick} in {room_id} - left lobby")
+        await do_lobby_leave(room_id, leaver_sid, leaver_nick)
 
 
 async def start_grace(sid, room_id):
@@ -148,20 +211,23 @@ async def start_grace(sid, room_id):
         return
     nick = room_data['players'].get(sid, 'Opponent')
     token = room_data.get('tokens', {}).get(sid)
-    task = asyncio.create_task(grace_timeout(room_id, sid, nick))
+    period = GRACE_PERIOD if room_data.get('status') == 'playing' else LOBBY_GRACE_PERIOD
+    task = asyncio.create_task(grace_timeout(room_id, sid, nick, period))
     pending[sid] = {'old_sid': sid, 'nick': nick, 'task': task, 'token': token}
-    print(f"Player {nick} dropped from {room_id} - {GRACE_PERIOD}s to rejoin")
-    await sio.emit('opponent_disconnected', {'nick': nick, 'grace': GRACE_PERIOD}, room=room_id, skip_sid=sid)
+    print(f"Player {nick} dropped from {room_id} - {period}s to rejoin")
+    await sio.emit('opponent_disconnected', {'nick': nick, 'grace': period}, room=room_id, skip_sid=sid)
 
 
-async def do_rejoin(new_sid, room_id, key):
+async def do_rejoin(new_sid, room_id, old_sid):
     room_data = rooms[room_id]
-    info = room_data['pending'].pop(key)
-    old_sid = info['old_sid']
-    task = info.get('task')
-    if task:
-        task.cancel()
+    info = room_data.get('pending', {}).pop(old_sid, None)
+    was_pending = info is not None
+    if was_pending and info.get('task'):
+        info['task'].cancel()
 
+    nick = info['nick'] if was_pending else room_data['players'].get(old_sid, 'Player')
+    if old_sid != new_sid:
+        await sio.leave_room(old_sid, room_id)
     migrate_sid(room_data, old_sid, new_sid)
     await sio.enter_room(new_sid, room_id)
 
@@ -172,19 +238,22 @@ async def do_rejoin(new_sid, room_id, key):
     opponent_ships = room_data.get('boards', {}).get(opponent_sid, []) if opponent_sid else []
     sunk_sizes = [s['size'] for s in gm.get_sunk_ships(opponent_ships, my_shots)]
 
-    print(f"Player {info['nick']} rejoined {room_id}")
+    print(f"Player {nick} rejoined {room_id}")
 
     await sio.emit('game_resumed', {
         'room_id': room_id,
         'config': room_data['config'],
-        'nick': info['nick'],
+        'nick': nick,
+        'phase': resume_phase(room_data, new_sid),
+        'players': list(room_data['players'].values()),
         'my_ships': my_ships,
         'my_shots': my_shots,
         'enemy_shots': enemy_shots,
         'my_turn': room_data.get('turn') == new_sid,
         'enemy_sunk_sizes': sunk_sizes,
     }, to=new_sid)
-    await sio.emit('opponent_reconnected', {'nick': info['nick']}, room=room_id, skip_sid=new_sid)
+    if was_pending:
+        await sio.emit('opponent_reconnected', {'nick': nick}, room=room_id, skip_sid=new_sid)
 
 
 @sio.event
@@ -198,17 +267,18 @@ async def disconnect(sid):
     for room_id, room_data in list(rooms.items()):
         if sid not in room_data['players']:
             continue
-        if room_data.get('status') == 'playing' and not room_data.get('pending', {}).get(sid):
-            pending = room_data.get('pending', {})
-            others = [s for s in room_data['players'] if s != sid]
-            if others and all(s in pending for s in others):
-                cancel_pending(room_data)
-                rooms.pop(room_id, None)
-                print(f"Room {room_id} closed (both players dropped, no winner)")
-            else:
-                await start_grace(sid, room_id)
-        else:
+        pending = room_data.get('pending', {})
+        if room_data.get('status') == 'finished' or sid in pending:
             await handle_leave(sid, room_id)
+            continue
+
+        others = [s for s in room_data['players'] if s != sid]
+        if others and all(s in pending for s in others):
+            cancel_pending(room_data)
+            rooms.pop(room_id, None)
+            print(f"Room {room_id} closed (both players dropped, no winner)")
+        else:
+            await start_grace(sid, room_id)
 
 @sio.event
 async def create_room(sid, data):
@@ -234,21 +304,26 @@ async def create_room(sid, data):
 @sio.event
 async def join_room(sid, data):
     room_id = data['room_id']
+    is_rejoin = bool(data.get('rejoin'))
+    provided = data.get('token')
+
     if room_id not in rooms:
-        await sio.emit('error', {'message': 'Room does not exist or is full'}, to=sid)
+        await fail_join(sid, 'Room does not exist or is full', is_rejoin)
         return
 
     room = rooms[room_id]
 
-    pending = room.get('pending', {})
-    if pending:
-        key = next(iter(pending))
-        info = pending[key]
-        provided = data.get('token')
-        if provided and provided == info.get('token'):
-            await do_rejoin(sid, room_id, key)
-        else:
-            await sio.emit('error', {'message': 'Cannot reconnect: this session belongs to another device.'}, to=sid)
+    owner = find_token_owner(room, provided, allow_active=is_rejoin)
+    if owner:
+        await do_rejoin(sid, room_id, owner)
+        return
+
+    if is_rejoin:
+        await fail_join(sid, 'Cannot reconnect: session expired.', True)
+        return
+
+    if room.get('pending') and room.get('status') == 'playing':
+        await sio.emit('error', {'message': 'Cannot reconnect: this session belongs to another device.'}, to=sid)
         return
 
     if room.get('status', 'waiting') == 'waiting' and len(room['players']) < 2:

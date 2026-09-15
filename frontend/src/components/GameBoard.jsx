@@ -4,6 +4,11 @@ import CodeField from './CodeField';
 const BOARD_SIZE = 10;
 const createEmptyBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
+// Od lg plansza skaluje sie do okna: 52vh pilnuje, zeby zmiescila sie w pionie razem
+// z naglowkiem i przyciskiem, 27vw - zeby obie plansze i panel floty wroga zmiescily sie
+// w wierszu. Dolny limit to dotychczasowe 360px, gorny 540px.
+const BOARD_GRID_CLASSES = 'grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:size-[clamp(360px,min(27vw,52vh),540px)] mx-auto';
+
 const getShipCells = (ships) => {
     const cells = new Set();
     (ships || []).forEach(ship => {
@@ -31,7 +36,7 @@ const boardFromShots = (shots) => {
 };
 
 export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, resumeState }) {
-    const [phase, setPhase] = useState(() => resumeState ? 'battle' : 'placement');
+    const [phase, setPhase] = useState(() => (resumeState && resumeState.phase) ? resumeState.phase : (resumeState ? 'battle' : 'placement'));
     const [myShips, setMyShips] = useState(() => resumeState ? resumeShipsToOverlay(resumeState.my_ships) : []);
     const [myBoard, setMyBoard] = useState(() => resumeState ? boardFromShots(resumeState.enemy_shots) : createEmptyBoard());
     const [enemyBoard, setEnemyBoard] = useState(() => resumeState ? boardFromShots(resumeState.my_shots) : createEmptyBoard());
@@ -173,7 +178,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             setPhase('game_over');
             setResult(data.winner === socket.id ? 'VICTORY' : 'DEFEAT');
             if (data.enemy_ships) setEnemyShips(data.enemy_ships);
-            if (roomCode) localStorage.removeItem('bs_token_' + roomCode);
+            if (roomCode) sessionStorage.removeItem('bs_token_' + roomCode);
         });
         socket.on('opponent_disconnected', (data) => {
             setGraceInfo({ nick: data.nick, secondsLeft: data.grace || 60 });
@@ -395,7 +400,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
     const enemyShipCells = phase === 'game_over' ? getShipCells(enemyShips) : null;
 
     return (
-        <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl relative">
+        <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl xl:max-w-[1500px] relative">
             {}
             <div className="absolute top-0 left-0 w-full flex justify-between items-start px-4 z-10">
                 <button
@@ -430,7 +435,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                 <div className="cyber-panel p-4 flex flex-col items-center">
                     <h2 className="text-[#39ff14] mb-2 font-bold">MY FLEET</h2>
                     <div
-                        className="grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:w-[360px] lg:h-[360px] relative mx-auto"
+                        className={`${BOARD_GRID_CLASSES} relative`}
                         onPointerLeave={handleGridPointerLeave}
                         style={{
                             touchAction: phase === 'placement' ? 'none' : 'auto',
@@ -570,7 +575,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                     <div className="flex flex-col lg:flex-row gap-4">
                         <div className="cyber-panel p-4 flex flex-col items-center">
                             <h2 className="text-red-500 mb-2 font-bold">RADAR (Right-Click to Mark)</h2>
-                            <div className="grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:w-[360px] lg:h-[360px] mx-auto">
+                            <div className={BOARD_GRID_CLASSES}>
                                 {enemyBoard.map((cell, i) => {
                                     const revealShip = enemyShipCells && enemyShipCells.has(i) && cell !== 'hit';
                                     return (
@@ -611,7 +616,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                         </div>
 
                         {}
-                        <div className="cyber-panel p-4 flex flex-col items-center lg:min-w-[130px]">
+                        <div className="cyber-panel p-4 flex flex-col items-center lg:min-w-[130px] xl:min-w-[150px]">
                             <h2 className="text-[#ff9900] mb-4 font-bold text-sm tracking-widest text-center">ENEMY<br />FLEET</h2>
                             <div className="flex flex-row lg:flex-col gap-4 justify-center items-center flex-wrap">
                                 {shipCategories.map(({ size, maxCount }) => {
@@ -622,7 +627,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                                         <div key={`enemy-ship-${size}`} className="flex flex-col items-center justify-center">
                                             <div className={`flex gap-[2px] mb-1 transition-all ${aliveCount <= 0 ? 'opacity-30 scale-90' : ''}`}>
                                                 {Array.from({ length: size }).map((_, i) => (
-                                                    <div key={i} className={`w-3 h-3 md:w-4 md:h-4 border border-black ${aliveCount > 0 ? 'bg-gray-500' : 'bg-red-600 shadow-[0_0_5px_red]'}`} />
+                                                    <div key={i} className={`w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 border border-black ${aliveCount > 0 ? 'bg-gray-500' : 'bg-red-600 shadow-[0_0_5px_red]'}`} />
                                                 ))}
                                             </div>
                                             <span className={`text-xs font-bold font-mono transition-all ${aliveCount > 0 ? 'text-gray-400' : 'text-red-500 line-through decoration-[2px] opacity-70'}`}>
@@ -638,11 +643,11 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
 
                 {}
                 {phase === 'placement' && (
-                    <div className="flex flex-col items-center gap-6 w-full lg:w-[450px]">
+                    <div className="flex flex-col items-center gap-6 w-full lg:w-[450px] xl:w-[500px]">
                         {}
                         <div className="cyber-panel p-4 flex flex-col items-center w-full min-h-[120px]">
                             <h3 className="text-[#00f2ea] text-sm tracking-widest mb-4">AVAILABLE SHIPS</h3>
-                            <div className="flex flex-wrap gap-4 justify-center items-end">
+                            <div className="flex flex-wrap gap-4 justify-center items-end [--yard-cell:25px] xl:[--yard-cell:32px]">
                                 {shipCategories.map(({ size, maxCount }) => {
                                     const placedCount = myShips.filter(s => s.size === size).length;
                                     const leftCount = maxCount - placedCount;
@@ -661,14 +666,14 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                                                     ${isAvailable ? 'bg-[#00f2ea] cursor-grab active:cursor-grabbing hover:scale-105' : 'bg-gray-600 grayscale opacity-50 cursor-not-allowed'}
                                                 `}
                                                 style={{
-                                                    width: `${size * 25}px`,
-                                                    height: '25px',
+                                                    width: `calc(var(--yard-cell) * ${size})`,
+                                                    height: 'var(--yard-cell)',
                                                     background: `repeating-linear-gradient(
                                                         to right,
                                                         ${isAvailable ? '#00f2ea' : '#4b5563'},
-                                                        ${isAvailable ? '#00f2ea' : '#4b5563'} 23px,
-                                                        transparent 23px,
-                                                        transparent 25px
+                                                        ${isAvailable ? '#00f2ea' : '#4b5563'} calc(var(--yard-cell) - 2px),
+                                                        transparent calc(var(--yard-cell) - 2px),
+                                                        transparent var(--yard-cell)
                                                     )`,
                                                     touchAction: 'none',
                                                     WebkitTouchCallout: 'none',
