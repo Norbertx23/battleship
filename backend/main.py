@@ -128,7 +128,8 @@ async def handle_leave(sid, room_id):
                 has_placed_ships = len(room_data.get('ready', [])) > 0
 
                 if current_status == 'finished':
-                    await sio.emit('player_disconnected', {'message': '', 'silent': True}, room=room_id)
+                    room_data['play_again'] = set()
+                    await sio.emit('player_disconnected', {'message': '', 'silent': True, 'opponent_left': True}, room=room_id)
                 elif current_status == 'playing':
                     room_data['status'] = 'finished'
                     save_match_to_db(remaining_nick, leaving_nick, remaining_nick)
@@ -254,6 +255,28 @@ async def do_rejoin(new_sid, room_id, old_sid):
     }, to=new_sid)
     if was_pending:
         await sio.emit('opponent_reconnected', {'nick': nick}, room=room_id, skip_sid=new_sid)
+
+@sio.event
+async def play_again(sid, data):
+    room = rooms.get(data.get('room_id'))
+    if not room or room.get('status') != 'finished' or sid not in room['players']:
+        return
+    if len(room['players']) < 2:
+        await sio.emit('error', {'message': 'Opponent left the room.'}, to=sid)
+        return
+
+    votes = room.setdefault('play_again', set())
+    votes.add(sid)
+
+    if len(votes) < 2:
+        await sio.emit('play_again_pending', {}, room=data['room_id'], skip_sid=sid)
+        return
+
+    gm.reset_room_state(room)
+    await sio.emit('game_start', {
+        'config': room['config'],
+        'players': list(room['players'].values()),
+    }, room=data['room_id'])
 
 
 @sio.event

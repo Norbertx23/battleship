@@ -48,6 +48,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
     const [opponentHitMessage, setOpponentHitMessage] = useState(null);
     const [isMarkMode, setIsMarkMode] = useState(false);
     const [showBoardAfterGame, setShowBoardAfterGame] = useState(false);
+    const [playAgain, setPlayAgain] = useState('idle');
     const [graceInfo, setGraceInfo] = useState(null);
     const [draggedShip, setDraggedShip] = useState(null);
     const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -178,7 +179,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             setPhase('game_over');
             setResult(data.winner === socket.id ? 'VICTORY' : 'DEFEAT');
             if (data.enemy_ships) setEnemyShips(data.enemy_ships);
-            if (roomCode) sessionStorage.removeItem('bs_token_' + roomCode);
         });
         socket.on('opponent_disconnected', (data) => {
             setGraceInfo({ nick: data.nick, secondsLeft: data.grace || 60 });
@@ -186,11 +186,15 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         socket.on('opponent_reconnected', () => {
             setGraceInfo(null);
         });
-        socket.on('error', (data) => {
+        const handleError = (data) => {
             alert(data.message);
             setPhase('placement');
-        });
-        socket.on('player_disconnected', (data) => {
+        };
+        socket.on('error', handleError);
+        const handlePlayAgainPending = () => setPlayAgain('asked');
+        socket.on('play_again_pending', handlePlayAgainPending);
+        const handlePlayerDisconnected = (data) => {
+            if (data.opponent_left) setPlayAgain('unavailable');
             if (data.forfeit) {
                 setTimeout(() => {
                     alert("ENEMY RETREATED: " + data.message);
@@ -202,7 +206,8 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                     if (onLeave) onLeave();
                 }, 100);
             }
-        });
+        };
+        socket.on('player_disconnected', handlePlayerDisconnected);
         return () => {
             if (opponentHitTimerRef.current) clearTimeout(opponentHitTimerRef.current);
             socket.off('battle_start');
@@ -210,8 +215,9 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             socket.off('game_over');
             socket.off('opponent_disconnected');
             socket.off('opponent_reconnected');
-            socket.off('error');
-            socket.off('player_disconnected');
+            socket.off('error', handleError);
+            socket.off('player_disconnected', handlePlayerDisconnected);
+            socket.off('play_again_pending', handlePlayAgainPending);
         };
     }, [socket]);
 
@@ -399,6 +405,21 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         : 'text-[#00f2ea]';
     const enemyShipCells = phase === 'game_over' ? getShipCells(enemyShips) : null;
 
+    const handlePlayAgain = () => {
+        socket.emit('play_again', { room_id: roomCode });
+        setPlayAgain('waiting');
+    };
+
+    const playAgainLabel = {
+        idle: 'PLAY AGAIN',
+        waiting: 'WAITING FOR OPPONENT...',
+        asked: 'ACCEPT PLAY AGAIN',
+        unavailable: 'OPPONENT LEFT',
+    }[playAgain];
+    const playAgainDisabled = playAgain === 'waiting' || playAgain === 'unavailable';
+    const showTopPlayAgain = phase === 'game_over' && showBoardAfterGame;
+    const playAgainButtonClasses = `px-4 py-1.5 border rounded text-xs font-bold tracking-widest whitespace-nowrap transition-colors ${playAgainDisabled ? 'border-gray-700 text-gray-600 cursor-not-allowed' : playAgain === 'asked' ? 'border-[#39ff14] text-[#39ff14] shadow-[0_0_12px_rgba(57,255,20,0.35)] hover:bg-[#39ff14]/10' : 'border-[#00f2ea] text-[#00f2ea] hover:bg-[#00f2ea]/10'}`;
+
     return (
         <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl xl:max-w-[1500px] relative">
             {}
@@ -409,6 +430,15 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                 >
                     &larr; {phase === 'game_over' ? 'RETURN TO LOBBY' : 'ABORT MISSION'}
                 </button>
+                {showTopPlayAgain && (
+                    <button
+                        onClick={handlePlayAgain}
+                        disabled={playAgainDisabled}
+                        className={`hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${playAgainButtonClasses}`}
+                    >
+                        {playAgainLabel}
+                    </button>
+                )}
                 {nick && (
                     <div className="text-right">
                         <span className="text-gray-500 text-[10px] tracking-widest">OPERATOR</span>
@@ -417,7 +447,17 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                 )}
             </div>
 
-            <h1 className={`text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold ${headerColorClass} mt-10 md:mt-6 lg:mt-2 text-center px-2 transition-colors`}>
+            {showTopPlayAgain && (
+                <button
+                    onClick={handlePlayAgain}
+                    disabled={playAgainDisabled}
+                    className={`md:hidden relative z-20 mt-10 ${playAgainButtonClasses}`}
+                >
+                    {playAgainLabel}
+                </button>
+            )}
+
+            <h1 className={`text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold ${headerColorClass} ${showTopPlayAgain ? 'md:mt-12' : 'mt-10 md:mt-6 lg:mt-2'} text-center px-2 transition-colors`}>
                 {phase === 'placement' && "DEPLOY YOUR FLEET"}
                 {phase === 'waiting' && "WAITING FOR OPPONENT..."}
                 {phase === 'battle' && (isMyTurn ? "YOUR TURN - FIRE!" : "ENEMY TURN - EVADE!")}
@@ -572,7 +612,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
 
                 {}
                 {phase !== 'placement' && phase !== 'waiting' && (
-                    <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex flex-col lg:flex-row gap-4 xl:relative">
                         <div className="cyber-panel p-4 flex flex-col items-center">
                             <h2 className="text-red-500 mb-2 font-bold">RADAR (Right-Click to Mark)</h2>
                             <div className={BOARD_GRID_CLASSES}>
@@ -616,7 +656,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                         </div>
 
                         {}
-                        <div className="cyber-panel p-4 flex flex-col items-center lg:min-w-[130px] xl:min-w-[150px]">
+                        <div className="cyber-panel p-4 flex flex-col items-center lg:min-w-[130px] xl:min-w-[150px] xl:absolute xl:left-full xl:top-0 xl:ml-4">
                             <h2 className="text-[#ff9900] mb-4 font-bold text-sm tracking-widest text-center">ENEMY<br />FLEET</h2>
                             <div className="flex flex-row lg:flex-col gap-4 justify-center items-center flex-wrap">
                                 {shipCategories.map(({ size, maxCount }) => {
@@ -763,6 +803,18 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                         <p className="text-gray-400 text-sm tracking-widest mb-4">
                             {result === 'VICTORY' ? "MISSION ACCOMPLISHED." : "ALL SHIPS LOST."}
                         </p>
+                        {playAgain === 'asked' && (
+                            <p className="-mb-4 text-[#39ff14] text-xs tracking-widest animate-pulse">
+                                OPPONENT WANTS TO PLAY AGAIN
+                            </p>
+                        )}
+                        <button
+                            onClick={handlePlayAgain}
+                            disabled={playAgainDisabled}
+                            className={`w-full py-3 border rounded text-sm font-bold tracking-widest transition-colors ${playAgainDisabled ? 'border-gray-700 text-gray-600 cursor-not-allowed' : playAgain === 'asked' ? 'border-[#39ff14] text-[#39ff14] shadow-[0_0_12px_rgba(57,255,20,0.35)] hover:bg-[#39ff14]/10' : 'border-[#00f2ea] text-[#00f2ea] hover:bg-[#00f2ea]/10'}`}
+                        >
+                            {playAgainLabel}
+                        </button>
                         <button onClick={onLeave} className="cyber-button w-full text-lg py-4 hover:scale-105 transition-transform">
                             LEAVE TO LOBBY
                         </button>

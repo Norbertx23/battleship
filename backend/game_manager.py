@@ -90,3 +90,12 @@ def check_win(board_ships, shots):
     hit_coords = { (s['x'], s['y']) for s in shots if s['result'] == 'hit' }
     
     return ship_coords.issubset(hit_coords)
+
+def reset_room_state(room_data):
+    room_data['boards'] = {}
+    room_data['shots'] = {sid: [] for sid in room_data['players']}
+    room_data['ready'] = []
+    room_data['turn'] = None
+    room_data['status'] = 'waiting'
+    room_data['play_again'] = set()
+    return room_data

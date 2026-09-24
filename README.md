@@ -16,6 +16,8 @@ Gra jest dla **dwóch osób** i opiera się na kodach pokojów:
 2. **Gracz 2** klika `JOIN ROOM`, wpisuje nick i wkleja otrzymany kod.
 3. Obaj gracze rozstawiają flotę i zatwierdzają — bitwa zaczyna się automatycznie.
 
+Nick jest zapamiętywany w przeglądarce, więc przy kolejnej wizycie nie trzeba go wpisywać od nowa.
+
 ### Rozstawianie floty
 
 | Akcja | Sterowanie |
@@ -42,9 +44,14 @@ Wygrywa ten, kto pierwszy zatopi całą flotę przeciwnika.
 
 Po zakończeniu bitwy przycisk **`SHOW BOARD`** odsłania planszę: na **zielono** zobaczysz, gdzie stały statki przeciwnika, których nie trafiłeś. Wynik trafia do globalnej historii meczów i rankingu widocznych w lobby.
 
+Przycisk **`PLAY AGAIN`** proponuje kolejną partię z tym samym przeciwnikiem, bez nowego kodu i ponownego łączenia. Druga strona widzi propozycję i potwierdza ją `ACCEPT PLAY AGAIN` — gdy zgodzą się obaj, plansze się czyszczą i wracacie do rozstawiania floty w tym samym pokoju. Przycisk jest dostępny zarówno w oknie wyniku, jak i w podglądzie planszy. Jeśli przeciwnik wyjdzie z pokoju, przycisk zmienia się w nieaktywne `OPPONENT LEFT`. Każda rozegrana partia trafia do historii jako osobny mecz.
+
 ### Rozłączenie
 
-Jeśli stracisz połączenie w trakcie bitwy, masz **60 sekund na powrót** — stan gry (Twoja flota, oddane strzały, czyja kolej) zostanie odtworzony. Po tym czasie przeciwnik wygrywa walkowerem.
+Po chwilowym zerwaniu połączenia gra **sama wraca do pokoju**. Po odświeżeniu strony (`F5`) wystarczy w tej samej karcie wejść w `JOIN ROOM` i podać ten sam kod — gra rozpozna, że to Ty.
+
+- **W trakcie bitwy** masz **60 sekund na powrót** — stan gry (Twoja flota, oddane strzały, czyja kolej) zostanie odtworzony. Po tym czasie przeciwnik wygrywa walkowerem.
+- **Przed bitwą** (oczekiwanie na przeciwnika, rozstawianie floty) masz **180 sekund**. Po tym czasie opuszczasz pokój.
 
 ---
 
@@ -147,7 +154,7 @@ npm run dev
 
 Aplikacja: **http://localhost:5173**. Vite przekierowuje `/api` na backend, więc działa tak samo jak na produkcji.
 
-Aby zagrać samemu ze sobą, otwórz dwie karty (jedną w trybie incognito).
+Aby zagrać samemu ze sobą, otwórz dwie karty — każda karta to osobny gracz. Obie podpowiedzą ten sam zapamiętany nick, więc w jednej warto go zmienić.
 
 ### Testy
 
@@ -255,11 +262,13 @@ deploy/           compose produkcyjny, skrypt wdrożeniowy, unit systemd
 
 ### Zdarzenia Socket.IO
 
-**Od klienta:** `create_room`, `join_room`, `place_ships`, `fire_shot`, `leave_room`
+**Od klienta:** `create_room`, `join_room`, `place_ships`, `fire_shot`, `play_again`, `leave_room`
 
-**Do klienta:** `room_created`, `session`, `game_start`, `battle_start`, `shot_result`, `game_over`, `opponent_disconnected`, `opponent_reconnected`, `game_resumed`, `player_disconnected`, `error`
+**Do klienta:** `room_created`, `session`, `game_start`, `battle_start`, `shot_result`, `game_over`, `play_again_pending`, `opponent_disconnected`, `opponent_reconnected`, `game_resumed`, `rejoin_failed`, `player_disconnected`, `error`
 
-Powrót po rozłączeniu działa na tokenie sesji: przy tworzeniu lub dołączaniu do pokoju serwer wysyła zdarzenie `session` z jednorazowym tokenem, który klient zapisuje w `localStorage`. Ponowne `join_room` z tym samym tokenem jest rozpoznawane jako powrót tego samego gracza i odtwarza stan rozgrywki zamiast tworzyć nowego uczestnika.
+Powrót po rozłączeniu działa na tokenie sesji: przy tworzeniu lub dołączaniu do pokoju serwer wysyła zdarzenie `session` z tokenem, który klient zapisuje w `sessionStorage` (osobno dla każdej karty, więc dwie karty to dwóch różnych graczy). Po ponownym połączeniu socketu klient sam wysyła `join_room` z tym tokenem i flagą `rejoin` (po odświeżeniu strony token dołącza ręczne `JOIN ROOM` z tym samym kodem) — serwer rozpoznaje powrót tego samego gracza i odtwarza stan rozgrywki (`game_resumed`) zamiast tworzyć nowego uczestnika. Gdy powrót jest już niemożliwy (minął czas albo pokój zniknął), serwer odpowiada `rejoin_failed` i klient wraca do lobby.
+
+Ponowna gra: `play_again` od pierwszego gracza trafia do przeciwnika jako `play_again_pending`. Gdy kliknie drugi, serwer czyści stan pokoju i wysyła obu zwykłe `game_start`, więc nowa partia startuje tą samą ścieżką co pierwsza.
 
 ---
 
