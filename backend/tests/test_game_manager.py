@@ -70,3 +70,40 @@ class TestSunkAndWin:
         ships = [ship(0, 0, 1)]
         shots = [{"x": 0, "y": 0, "result": "miss"}]
         assert gm.check_win(ships, shots) is False
+
+
+def finished_room():
+    return {
+        "host": "sid_a",
+        "players": {"sid_a": "Norbert", "sid_b": "Monic"},
+        "config": {"4": 1, "3": 2, "2": 2, "1": 4},
+        "status": "finished",
+        "boards": {"sid_a": [ship(0, 0, 2)], "sid_b": [ship(5, 5, 1)]},
+        "shots": {"sid_a": [{"x": 5, "y": 5, "result": "hit"}], "sid_b": []},
+        "ready": ["sid_a", "sid_b"],
+        "tokens": {"sid_a": "tok_a", "sid_b": "tok_b"},
+        "turn": "sid_a",
+        "play_again": {"sid_a", "sid_b"},
+    }
+
+
+class TestResetRoomState:
+    def test_czysci_stan_partii(self):
+        room = gm.reset_room_state(finished_room())
+        assert room["boards"] == {}
+        assert room["ready"] == []
+        assert room["turn"] is None
+        assert room["play_again"] == set()
+        assert room["status"] == "waiting"
+
+    def test_zostawia_graczy_config_tokeny_i_hosta(self):
+        before = finished_room()
+        room = gm.reset_room_state(finished_room())
+        assert room["players"] == before["players"]
+        assert room["config"] == before["config"]
+        assert room["tokens"] == before["tokens"]
+        assert room["host"] == before["host"]
+
+    def test_strzaly_puste_dla_kazdego_gracza(self):
+        room = gm.reset_room_state(finished_room())
+        assert room["shots"] == {"sid_a": [], "sid_b": []}

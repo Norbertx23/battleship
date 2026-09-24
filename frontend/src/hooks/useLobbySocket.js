@@ -45,6 +45,7 @@ export default function useLobbySocket() {
             console.log('GAME STARTED! Config:', data.config);
             setResumeState(null);
             setShipConfig(data.config);
+            setResumeKey(prev => prev + 1);
             setView('game');
         };
         const handleGameResumed = (data) => {
