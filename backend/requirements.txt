@@ -1,7 +1,7 @@
 fastapi
 uvicorn
-sqlalchemy
-psycopg2-binary
+sqlalchemy>=2.1
+psycopg[binary]
 python-socketio
 python-dotenv
 
