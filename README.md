@@ -270,6 +270,17 @@ Powrót po rozłączeniu działa na tokenie sesji: przy tworzeniu lub dołączan
 
 Ponowna gra: `play_again` od pierwszego gracza trafia do przeciwnika jako `play_again_pending`. Gdy kliknie drugi, serwer czyści stan pokoju i wysyła obu zwykłe `game_start`, więc nowa partia startuje tą samą ścieżką co pierwsza.
 
+### Walidacja po stronie serwera
+
+Serwer nie ufa klientowi. Każde zdarzenie sprawdza sam, a niepoprawne odrzuca, więc zmodyfikowany klient albo kilka linijek w konsoli przeglądarki nie dają przewagi w grze.
+
+- **Nick** (`create_room`, `join_room`) musi mieć od 1 do 30 znaków po obcięciu spacji. W przeciwnym razie serwer odpowiada `error`.
+- **Konfiguracja floty** (`create_room`) może zawierać tylko klucze `'1'`–`'4'` (liczba masztów), a każda wartość musi być liczbą całkowitą od 0 do 5. Flota musi mieć co najmniej jeden statek, np. `{'4': 1, '3': 2, '2': 2, '1': 4}`.
+- **Rozstawienie** (`place_ships`) przyjmuje tylko gracz tego pokoju, tylko przed bitwą i tylko gdy w pokoju jest dwóch graczy. Flota musi dokładnie odpowiadać konfiguracji pokoju (liczba statków każdego rozmiaru), a statki muszą mieścić się na planszy i nie mogą się stykać. Po starcie bitwy floty nie da się już zmienić.
+- **Strzał** (`fire_shot`) liczy się tylko w trakcie bitwy, w turze strzelającego i gdy nikt nie czeka na powrót po rozłączeniu. Współrzędne muszą być liczbami całkowitymi 0–9, a w to samo pole nie da się strzelić dwa razy. Po końcu gry kolejne strzały są ignorowane, więc nie da się nabić wygranych w rankingu.
+
+Niepoprawne strzały serwer pomija bez odpowiedzi, bo normalny klient i tak ich nie wysyła. Endpointy statystyk mają limity parametrów: `page` od 1, `limit` od 1 do 50, `search` do 50 znaków. Wartość spoza zakresu daje odpowiedź `422`.
+
 ---
 
 ## 📄 Licencja
