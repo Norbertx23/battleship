@@ -32,8 +32,8 @@ def config():
     return {'4': 1, '3': 2, '2': 2, '1': 4}
 
 
-async def create_room(sent, sid='host1', nick='Host'):
-    await main.create_room(sid, {'nick': nick, 'config': config()})
+async def create_room(sent, sid='host1', nick='Host', cfg=None):
+    await main.create_room(sid, {'nick': nick, 'config': cfg or config()})
     session = events(sent, 'session', to=sid)[-1]['data']
     return session['room_id'], session['token']
 
@@ -100,7 +100,7 @@ def test_powrot_z_tokenem_zanim_serwer_zauwazy_rozlaczenie(fake_sio):
 
 def test_po_rozstawieniu_host_wraca_w_fazie_oczekiwania(fake_sio):
     async def scenario():
-        room_id, token = await create_room(fake_sio)
+        room_id, token = await create_room(fake_sio, cfg={'1': 1})
         await main.join_room('guest1', {'room_id': room_id, 'nick': 'Guest'})
         await main.place_ships('host1', {'room_id': room_id, 'ships': [{'x': 0, 'y': 0, 'size': 1, 'vertical': False}]})
         await main.disconnect('host1')
@@ -158,7 +158,7 @@ def test_rozlaczenie_w_trakcie_bitwy_nadal_konczy_sie_walkowerem(fake_sio, monke
     monkeypatch.setattr(main, 'GRACE_PERIOD', 0)
 
     async def scenario():
-        room_id, _ = await create_room(fake_sio)
+        room_id, _ = await create_room(fake_sio, cfg={'1': 1})
         await main.join_room('guest1', {'room_id': room_id, 'nick': 'Guest'})
         ships = [{'x': 0, 'y': 0, 'size': 1, 'vertical': False}]
         await main.place_ships('host1', {'room_id': room_id, 'ships': ships})
