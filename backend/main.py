@@ -1,8 +1,7 @@
 import random
 import asyncio
 
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
@@ -16,20 +15,22 @@ import game_manager as gm
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 fastapi_app = FastAPI()
 
-fastapi_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 app = socketio.ASGIApp(sio, fastapi_app)
 
 rooms = {}
 
 GRACE_PERIOD = 60
 LOBBY_GRACE_PERIOD = 180
+MAX_NICK_LENGTH = 30
+
+
+def clean_nick(nick):
+    if not isinstance(nick, str):
+        return None
+    nick = nick.strip()
+    if not nick or len(nick) > MAX_NICK_LENGTH:
+        return None
+    return nick
 
 @sio.event
 async def connect(sid, environ):
@@ -305,12 +306,20 @@ async def disconnect(sid):
 
 @sio.event
 async def create_room(sid, data):
+    nick = clean_nick(data.get('nick'))
+    if not nick:
+        await sio.emit('error', {'message': 'Invalid nickname.'}, to=sid)
+        return
+    if not gm.validate_config(data.get('config')):
+        await sio.emit('error', {'message': 'Invalid fleet configuration.'}, to=sid)
+        return
+
     room_id = str(uuid.uuid4())[:6].upper()
     token = uuid.uuid4().hex
 
     rooms[room_id] = {
         'host': sid,
-        'players': {sid: data['nick']},
+        'players': {sid: nick},
         'config': data['config'],
         'status': 'waiting',
         'boards': {},
@@ -322,7 +331,7 @@ async def create_room(sid, data):
     await sio.enter_room(sid, room_id)
     await sio.emit('session', {'room_id': room_id, 'token': token}, to=sid)
     await sio.emit('room_created', {'room_id' : room_id}, to=sid)
-    print(f"Pokój {room_id} stworzony przez {data['nick']}")
+    print(f"Pokój {room_id} stworzony przez {nick}")
 
 @sio.event
 async def join_room(sid, data):
@@ -350,8 +359,12 @@ async def join_room(sid, data):
         return
 
     if room.get('status', 'waiting') == 'waiting' and len(room['players']) < 2:
+        nick = clean_nick(data.get('nick'))
+        if not nick:
+            await sio.emit('error', {'message': 'Invalid nickname.'}, to=sid)
+            return
         token = uuid.uuid4().hex
-        room['players'][sid] = data['nick']
+        room['players'][sid] = nick
         if 'shots' not in room:
             room['shots'] = {}
         room['shots'][sid] = []
@@ -374,13 +387,12 @@ def get_db():
 
 @sio.event
 async def place_ships(sid, data):
-    room_id = data['room_id']
-    ships = data['ships']
+    room_id = data.get('room_id')
+    ships = data.get('ships')
+    room = rooms.get(room_id)
 
-    if room_id in rooms:
-        room = rooms[room_id]
-
-        if not gm.validate_ships(ships):
+    if room and sid in room['players'] and room.get('status') == 'waiting' and len(room['players']) == 2:
+        if not gm.validate_fleet(ships, room['config']):
             print(f"Validation failed for {sid} with ships: {ships}")
             await sio.emit('error', {'message': 'Invalid ship placement!'}, to=sid)
             return
@@ -417,15 +429,18 @@ def save_match_to_db(winner_nick, player1_nick, player2_nick):
 async def fire_shot(sid, data):
     print(f"SHOT FIRED by {sid}: {data}")
 
-    room_id = data['room_id']
-    x,y = data['x'], data['y']
-    if room_id in rooms:
-        room = rooms[room_id]
+    room_id = data.get('room_id')
+    x, y = data.get('x'), data.get('y')
+    room = rooms.get(room_id)
 
+    if room and room.get('status') == 'playing':
         if room.get('pending'):
             return
 
         if room['turn'] != sid:
+            return
+
+        if not gm.is_valid_shot(room['shots'][sid], x, y):
             return
 
         opponent_sid = [p for p in room['players'] if p != sid][0]
@@ -484,7 +499,7 @@ def healthz():
 
 
 @fastapi_app.get("/stats/recent-matches", response_model=schemas.MatchListResponse)
-def get_recent_matches(page: int = 1, limit: int = 5, search: str = "", db: Session = Depends(get_db)):
+def get_recent_matches(page: int = Query(1, ge=1), limit: int = Query(5, ge=1, le=50), search: str = Query("", max_length=50), db: Session = Depends(get_db)):
     skip = (page - 1) * limit
     
     query = db.query(models.MatchHistory)
@@ -507,7 +522,7 @@ def get_recent_matches(page: int = 1, limit: int = 5, search: str = "", db: Sess
 
 
 @fastapi_app.get("/stats/top-players", response_model=list[schemas.TopPlayer])
-def get_top_players(limit: int = 10, db: Session = Depends(get_db)):
+def get_top_players(limit: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)):
     results = db.query(
         models.MatchHistory.winner_nick.label("nick"),
         func.count(models.MatchHistory.winner_nick).label("wins")

@@ -1,5 +1,12 @@
+from collections import Counter
 
-def create_empty_board(size=10):
+BOARD_SIZE = 10
+SHIP_SIZES = (1, 2, 3, 4)
+MAX_SHIPS_PER_SIZE = 5
+
+
+
+def create_empty_board(size=BOARD_SIZE):
     return [[None for _ in range(size)] for _ in range(size)]
 
 
@@ -16,7 +23,7 @@ def check_surroundings(board, x, y):
     return True
 
 
-def validate_ships(ships, size=10):
+def validate_ships(ships, size=BOARD_SIZE):
     board = create_empty_board(size)
 
     for ship in ships:
@@ -43,6 +50,45 @@ def validate_ships(ships, size=10):
             board[curr_y][curr_x] = 'SHIP'
 
     return True
+
+
+def validate_config(config):
+    if not isinstance(config, dict) or not config:
+        return False
+    if any(key not in {str(size) for size in SHIP_SIZES} for key in config):
+        return False
+    counts = list(config.values())
+    if not all(type(count) is int and 0 <= count <= MAX_SHIPS_PER_SIZE for count in counts):
+        return False
+    return sum(counts) > 0
+
+
+def is_valid_ship(ship):
+    return (
+        isinstance(ship, dict)
+        and ship.get('size') in SHIP_SIZES
+        and type(ship.get('size')) is int
+        and type(ship.get('x')) is int
+        and type(ship.get('y')) is int
+        and type(ship.get('vertical')) is bool
+    )
+
+
+def validate_fleet(ships, config):
+    if not isinstance(ships, list) or not all(is_valid_ship(ship) for ship in ships):
+        return False
+    expected = Counter({int(size): count for size, count in config.items() if count})
+    if Counter(ship['size'] for ship in ships) != expected:
+        return False
+    return validate_ships(ships)
+
+
+def is_valid_shot(shots, x, y, size=BOARD_SIZE):
+    if type(x) is not int or type(y) is not int:
+        return False
+    if not (0 <= x < size and 0 <= y < size):
+        return False
+    return all((shot['x'], shot['y']) != (x, y) for shot in shots)
 
 
 def check_hit(board_ships, x, y):

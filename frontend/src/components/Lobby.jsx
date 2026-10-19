@@ -194,7 +194,7 @@ export default function Lobby() {
                             <form className="form lg:gap-[calc(0.875rem_-_var(--menu-shrink)*0.02)]!" onSubmit={(e) => e.preventDefault()}>
                                 <div className="form-group">
                                     <label htmlFor="nick">CODENAME</label>
-                                    <input type="text" id="nick" name="nick" required value={nick} onChange={(e) => setNick(e.target.value)} onBlur={() => !nick.trim() && setNick(guestNick)} placeholder="Enter your identity" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
+                                    <input type="text" id="nick" name="nick" required maxLength={30} value={nick} onChange={(e) => setNick(e.target.value)} onBlur={() => !nick.trim() && setNick(guestNick)} placeholder="Enter your identity" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
                                 </div>
 
                                 {view === 'create' && (
