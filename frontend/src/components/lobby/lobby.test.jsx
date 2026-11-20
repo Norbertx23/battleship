@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import i18n from '../../i18n';
 import { NoticeProvider } from '../../notice/NoticeContext';
 import JoinForm from './JoinForm';
@@ -10,9 +11,11 @@ import TopPlayers from './TopPlayers';
 beforeEach(async () => { await i18n.changeLanguage('en'); });
 
 const renderJoin = (props) => render(
-  <NoticeProvider>
-    <JoinForm nick="" onNickChange={() => {}} code="" onCodeChange={() => {}} onJoin={() => {}} {...props} />
-  </NoticeProvider>,
+  <MemoryRouter>
+    <NoticeProvider>
+      <JoinForm nick="" onNickChange={() => {}} code="" onCodeChange={() => {}} onJoin={() => {}} {...props} />
+    </NoticeProvider>
+  </MemoryRouter>,
 );
 
 test('JoinForm wywołuje onJoin przy wypełnionym nicku', async () => {

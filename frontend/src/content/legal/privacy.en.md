@@ -12,6 +12,8 @@ The data controller is Norbert Åšwistak, who runs the Battleship game as a nonâ€
 - **Match result**: both players' nicknames, the winner, and the date and time of the game.
 - **IP address and technical data** recorded in server logs and by Cloudflare, which carries the traffic to the game.
 
+Providing a nickname is voluntary, but without it you can't create a room or join a game. Your IP address is sent automatically by your browser whenever it connects to the site.
+
 We don't create accounts, don't collect email addresses, and don't use analytics or ads.
 
 ## 3. Why and on what legal basis
@@ -22,7 +24,7 @@ We don't create accounts, don't collect email addresses, and don't use analytics
 
 ## 4. Browser storage
 
-The game stores in your browser (localStorage and sessionStorage) your nickname, your chosen language and the data needed to get back into the current game after a page refresh. This data doesn't leave your device for any other purpose, and you can delete it by clearing the site data. We don't use tracking cookies.
+The game stores in your browser (localStorage and sessionStorage) your nickname, your chosen language and the data needed to get back into the current game after a page refresh. This data doesn't leave your device for any other purpose, and you can delete it by clearing the site data. We don't use tracking or advertising cookies. Only Cloudflare may set a technical cookie (e.g. `__cf_bm` or `cf_clearance`) needed to protect the site from bots and attacks.
 
 ## 5. How long we keep data
 
@@ -37,7 +39,7 @@ The game runs on the controller's private server in Poland. Traffic to the game 
 
 ## 7. Your rights
 
-You can ask for access to your data, its correction or deletion (e.g. all matches with your nickname), restriction of processing, and you can object. Write via [GitHub Issues](https://github.com/Norbertx23/battleship/issues), giving your nickname and the approximate dates of your games. Issues on GitHub are public, so if you prefer private contact, use the email address from section 1. We'll reply within 30 days. Deleted data disappears from the database right away and from backups within 14 days at the latest. You also have the right to lodge a complaint with the President of the Polish Personal Data Protection Office (PUODO).
+You can ask for access to your data, its correction or deletion (e.g. all matches with your nickname), restriction of processing and data portability, and you can object to the processing. Write via [GitHub Issues](https://github.com/Norbertx23/battleship/issues), giving your nickname and the approximate dates of your games. Issues on GitHub are public, so if you prefer private contact, use the email address from section 1. We'll reply within 30 days. Deleted data disappears from the database right away and from backups within 14 days at the latest. You also have the right to lodge a complaint with the President of the Polish Personal Data Protection Office (PUODO).
 
 ## 8. Changes
 

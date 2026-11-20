@@ -178,5 +178,8 @@
     "opponent_left": "Przeciwnik opuścił pokój.",
     "opponent_forfeit": "{{nick}} opuszcza grę. Wygrywasz!",
     "player_left": "{{nick}} opuszcza pokój."
+  },
+  "consent": {
+    "text": "Grając, akceptujesz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>."
   }
 }

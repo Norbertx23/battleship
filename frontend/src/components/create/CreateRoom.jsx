@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import PaperLayout from '../layout/PaperLayout';
 import FleetSelector from './FleetSelector';
+import Consent from '../lobby/Consent';
 
 export default function CreateRoom({ nick, onNickChange, config, onConfigChange, onBack, onCreate }) {
   const { t } = useTranslation();
@@ -41,7 +42,8 @@ export default function CreateRoom({ nick, onNickChange, config, onConfigChange,
 
           <FleetSelector config={config} onChange={onConfigChange} />
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-3">
+            <Consent />
             <button type="submit" className="sketch-border inline-flex min-h-[52px] cursor-pointer items-center border-ink bg-ink px-7 text-lg font-extrabold text-white transition-transform hover:-translate-y-0.5 hover:-rotate-1">
               {t('create.submit')}
             </button>

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import { useNotice } from '../../notice/useNotice';
+import Consent from './Consent';
 
 const inputClass = 'h-12 w-full border-0 border-b-2 border-ink-dark bg-transparent px-1 font-hand text-[30px] text-ink outline-none placeholder:text-placeholder focus:border-pen';
 
@@ -35,6 +36,7 @@ export default function JoinForm({ nick, onNickChange, code, onCodeChange, onJoi
       <button type="submit" className="sketch-border inline-flex min-h-12 cursor-pointer items-center gap-2 border-pen bg-pen px-6 text-[17px] font-extrabold text-white transition-transform hover:-translate-y-0.5 hover:-rotate-1">
         <LogIn size={20} aria-hidden="true" />{t('lobby.join')}
       </button>
+      <Consent className="basis-full" />
     </form>
   );
 }

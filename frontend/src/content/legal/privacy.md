@@ -12,6 +12,8 @@ Administratorem danych jest Norbert Świstak, osoba prowadząca grę Battleship 
 - **Wynik meczu**: nicki obu graczy, zwycięzca oraz data i godzina gry.
 - **Adres IP i dane techniczne** zapisywane w logach serwera i przez Cloudflare, przez które przechodzi ruch do gry.
 
+Podanie nicku jest dobrowolne, ale bez niego nie da się utworzyć pokoju ani dołączyć do gry. Adres IP Twoja przeglądarka przesyła automatycznie przy każdym połączeniu ze stroną.
+
 Nie zakładamy kont, nie zbieramy adresów e‑mail, nie używamy analityki ani reklam.
 
 ## 3. Po co i na jakiej podstawie
@@ -22,7 +24,7 @@ Nie zakładamy kont, nie zbieramy adresów e‑mail, nie używamy analityki ani 
 
 ## 4. Pamięć przeglądarki
 
-Gra zapisuje w pamięci Twojej przeglądarki (localStorage i sessionStorage) Twój nick, wybrany język i dane pozwalające wrócić do bieżącej rozgrywki po odświeżeniu strony. Te dane nie opuszczają Twojego urządzenia w innym celu i możesz je usunąć, czyszcząc dane witryny. Nie używamy plików cookies śledzących.
+Gra zapisuje w pamięci Twojej przeglądarki (localStorage i sessionStorage) Twój nick, wybrany język i dane pozwalające wrócić do bieżącej rozgrywki po odświeżeniu strony. Te dane nie opuszczają Twojego urządzenia w innym celu i możesz je usunąć, czyszcząc dane witryny. Nie używamy plików cookies śledzących ani reklamowych. Jedynie Cloudflare może zapisać techniczny plik cookie (np. `__cf_bm` lub `cf_clearance`), potrzebny do ochrony strony przed botami i atakami.
 
 ## 5. Jak długo trzymamy dane
 
@@ -37,7 +39,7 @@ Serwer gry stoi na prywatnym serwerze administratora w Polsce. Ruch do gry przec
 
 ## 7. Twoje prawa
 
-Możesz poprosić o dostęp do swoich danych, ich poprawienie lub usunięcie (np. wszystkich meczów z Twoim nickiem), ograniczenie przetwarzania oraz wnieść sprzeciw. Napisz przez [GitHub Issues](https://github.com/Norbertx23/battleship/issues), podając nick i przybliżone daty gier. Zgłoszenia na GitHubie są publiczne, więc jeśli wolisz prywatny kontakt, użyj adresu e‑mail z punktu 1. Odpowiemy w ciągu 30 dni. Usunięte dane znikają z bazy od razu, a z kopii zapasowych najpóźniej po 14 dniach. Masz też prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych.
+Możesz poprosić o dostęp do swoich danych, ich poprawienie lub usunięcie (np. wszystkich meczów z Twoim nickiem), ograniczenie przetwarzania, przeniesienie danych oraz wnieść sprzeciw wobec ich przetwarzania. Napisz przez [GitHub Issues](https://github.com/Norbertx23/battleship/issues), podając nick i przybliżone daty gier. Zgłoszenia na GitHubie są publiczne, więc jeśli wolisz prywatny kontakt, użyj adresu e‑mail z punktu 1. Odpowiemy w ciągu 30 dni. Usunięte dane znikają z bazy od razu, a z kopii zapasowych najpóźniej po 14 dniach. Masz też prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych.
 
 ## 8. Zmiany
 

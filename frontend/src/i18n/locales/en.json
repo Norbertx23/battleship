@@ -178,5 +178,8 @@
     "opponent_left": "Your opponent has left the room.",
     "opponent_forfeit": "{{nick}} left the game. You win!",
     "player_left": "{{nick}} left the room."
+  },
+  "consent": {
+    "text": "By playing, you accept the <terms>Terms of Use</terms> and the <privacy>Privacy Policy</privacy>."
   }
 }
