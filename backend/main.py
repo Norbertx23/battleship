@@ -98,9 +98,9 @@ def resume_phase(room_data, sid):
     return 'waiting' if sid in room_data.get('ready', []) else 'placement'
 
 
-async def fail_join(sid, message, is_rejoin):
+async def fail_join(sid, code, message, is_rejoin):
     event = 'rejoin_failed' if is_rejoin else 'error'
-    await sio.emit(event, {'message': message}, to=sid)
+    await sio.emit(event, {'code': code, 'message': message}, to=sid)
 
 
 async def handle_leave(sid, room_id):
@@ -135,9 +135,9 @@ async def handle_leave(sid, room_id):
                     room_data['status'] = 'finished'
                     save_match_to_db(remaining_nick, leaving_nick, remaining_nick)
                     await sio.emit('game_over', {'winner': remaining_sid, 'enemy_ships': leaving_ships}, room=room_id)
-                    await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
+                    await sio.emit('player_disconnected', {'code': 'opponent_forfeit', 'nick': leaving_nick, 'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
                 else:
-                    await sio.emit('player_disconnected', {'message': f'Player {leaving_nick} left the room.'}, room=room_id)
+                    await sio.emit('player_disconnected', {'code': 'player_left', 'nick': leaving_nick, 'message': f'Player {leaving_nick} left the room.'}, room=room_id)
 
 
 async def do_forfeit(room_id, leaver_sid, leaver_nick):
@@ -166,7 +166,7 @@ async def do_forfeit(room_id, leaver_sid, leaver_nick):
     room_data['status'] = 'finished'
     save_match_to_db(remaining_nick, leaver_nick, remaining_nick)
     await sio.emit('game_over', {'winner': remaining_sid, 'enemy_ships': room_data['boards'].get(leaver_sid, [])}, room=room_id)
-    await sio.emit('player_disconnected', {'message': f'Opponent {leaver_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
+    await sio.emit('player_disconnected', {'code': 'opponent_forfeit', 'nick': leaver_nick, 'message': f'Opponent {leaver_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
 
 
 async def do_lobby_leave(room_id, leaver_sid, leaver_nick):
@@ -183,7 +183,7 @@ async def do_lobby_leave(room_id, leaver_sid, leaver_nick):
         print(f"Room {room_id} deleted (nobody left in lobby)")
         return
 
-    await sio.emit('player_disconnected', {'message': f'Player {leaver_nick} left the room.'}, room=room_id)
+    await sio.emit('player_disconnected', {'code': 'player_left', 'nick': leaver_nick, 'message': f'Player {leaver_nick} left the room.'}, room=room_id)
 
 
 async def grace_timeout(room_id, leaver_sid, leaver_nick, period):
@@ -263,7 +263,7 @@ async def play_again(sid, data):
     if not room or room.get('status') != 'finished' or sid not in room['players']:
         return
     if len(room['players']) < 2:
-        await sio.emit('error', {'message': 'Opponent left the room.'}, to=sid)
+        await sio.emit('error', {'code': 'opponent_left', 'message': 'Opponent left the room.'}, to=sid)
         return
 
     votes = room.setdefault('play_again', set())
@@ -308,10 +308,10 @@ async def disconnect(sid):
 async def create_room(sid, data):
     nick = clean_nick(data.get('nick'))
     if not nick:
-        await sio.emit('error', {'message': 'Invalid nickname.'}, to=sid)
+        await sio.emit('error', {'code': 'invalid_nickname', 'message': 'Invalid nickname.'}, to=sid)
         return
     if not gm.validate_config(data.get('config')):
-        await sio.emit('error', {'message': 'Invalid fleet configuration.'}, to=sid)
+        await sio.emit('error', {'code': 'invalid_fleet_config', 'message': 'Invalid fleet configuration.'}, to=sid)
         return
 
     room_id = str(uuid.uuid4())[:6].upper()
@@ -340,7 +340,7 @@ async def join_room(sid, data):
     provided = data.get('token')
 
     if room_id not in rooms:
-        await fail_join(sid, 'Room does not exist or is full', is_rejoin)
+        await fail_join(sid, 'room_not_found_or_full', 'Room does not exist or is full', is_rejoin)
         return
 
     room = rooms[room_id]
@@ -351,17 +351,17 @@ async def join_room(sid, data):
         return
 
     if is_rejoin:
-        await fail_join(sid, 'Cannot reconnect: session expired.', True)
+        await fail_join(sid, 'session_expired', 'Cannot reconnect: session expired.', True)
         return
 
     if room.get('pending') and room.get('status') == 'playing':
-        await sio.emit('error', {'message': 'Cannot reconnect: this session belongs to another device.'}, to=sid)
+        await sio.emit('error', {'code': 'session_other_device', 'message': 'Cannot reconnect: this session belongs to another device.'}, to=sid)
         return
 
     if room.get('status', 'waiting') == 'waiting' and len(room['players']) < 2:
         nick = clean_nick(data.get('nick'))
         if not nick:
-            await sio.emit('error', {'message': 'Invalid nickname.'}, to=sid)
+            await sio.emit('error', {'code': 'invalid_nickname', 'message': 'Invalid nickname.'}, to=sid)
             return
         token = uuid.uuid4().hex
         room['players'][sid] = nick
@@ -376,7 +376,7 @@ async def join_room(sid, data):
         print(f"{sid} dołączył do {room_id}")
 
     else:
-        await sio.emit('error', {'message' : 'Room does not exist or is full'}, to=sid)
+        await sio.emit('error', {'code': 'room_not_found_or_full', 'message': 'Room does not exist or is full'}, to=sid)
 def get_db():
     db = SessionLocal()
     try:
@@ -394,7 +394,7 @@ async def place_ships(sid, data):
     if room and sid in room['players'] and room.get('status') == 'waiting' and len(room['players']) == 2:
         if not gm.validate_fleet(ships, room['config']):
             print(f"Validation failed for {sid} with ships: {ships}")
-            await sio.emit('error', {'message': 'Invalid ship placement!'}, to=sid)
+            await sio.emit('error', {'code': 'invalid_ship_placement', 'message': 'Invalid ship placement!'}, to=sid)
             return
 
         room['boards'][sid] = ships
