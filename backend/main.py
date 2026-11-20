@@ -11,6 +11,7 @@ import socketio
 import uuid
 from sqlalchemy import or_
 import game_manager as gm
+from rate_limit import RateLimiter, client_ip
 
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 fastapi_app = FastAPI()
@@ -23,6 +24,35 @@ GRACE_PERIOD = 60
 LOBBY_GRACE_PERIOD = 180
 MAX_NICK_LENGTH = 30
 
+STATS_LIMIT = 60
+ROOM_LIMIT = 10
+LIMIT_WINDOW = 60
+RATE_LIMITED_MESSAGE = 'Too many requests. Try again in a moment.'
+
+stats_limiter = RateLimiter(STATS_LIMIT, LIMIT_WINDOW)
+room_limiter = RateLimiter(ROOM_LIMIT, LIMIT_WINDOW)
+sid_ips = {}
+
+
+@fastapi_app.middleware('http')
+async def limit_stats(request, call_next):
+    if request.url.path.startswith('/stats'):
+        ip = client_ip(request.headers, request.client.host if request.client else 'unknown')
+        if not stats_limiter.hit(ip):
+            return JSONResponse(
+                status_code=429,
+                content={'code': 'rate_limited', 'message': RATE_LIMITED_MESSAGE},
+                headers={'Retry-After': str(stats_limiter.retry_after(ip))},
+            )
+    return await call_next(request)
+
+
+async def room_rate_ok(sid):
+    if room_limiter.hit(sid_ips.get(sid, sid)):
+        return True
+    await sio.emit('error', {'code': 'rate_limited', 'message': RATE_LIMITED_MESSAGE}, to=sid)
+    return False
+
 
 def clean_nick(nick):
     if not isinstance(nick, str):
@@ -34,6 +64,11 @@ def clean_nick(nick):
 
 @sio.event
 async def connect(sid, environ):
+    headers = {
+        'cf-connecting-ip': environ.get('HTTP_CF_CONNECTING_IP'),
+        'x-forwarded-for': environ.get('HTTP_X_FORWARDED_FOR'),
+    }
+    sid_ips[sid] = client_ip(headers, environ.get('REMOTE_ADDR', sid))
     print("connect ", sid)
 
 def cancel_pending(room_data):
@@ -288,6 +323,7 @@ async def leave_room(sid, data):
 @sio.event
 async def disconnect(sid):
     print("disconnect ", sid)
+    sid_ips.pop(sid, None)
     for room_id, room_data in list(rooms.items()):
         if sid not in room_data['players']:
             continue
@@ -306,6 +342,8 @@ async def disconnect(sid):
 
 @sio.event
 async def create_room(sid, data):
+    if not await room_rate_ok(sid):
+        return
     nick = clean_nick(data.get('nick'))
     if not nick:
         await sio.emit('error', {'code': 'invalid_nickname', 'message': 'Invalid nickname.'}, to=sid)
@@ -335,6 +373,8 @@ async def create_room(sid, data):
 
 @sio.event
 async def join_room(sid, data):
+    if not await room_rate_ok(sid):
+        return
     room_id = data['room_id']
     is_rejoin = bool(data.get('rejoin'))
     provided = data.get('token')

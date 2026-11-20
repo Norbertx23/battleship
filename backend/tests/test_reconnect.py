@@ -20,6 +20,8 @@ def fake_sio(monkeypatch):
     monkeypatch.setattr(main.sio, 'leave_room', noop)
     monkeypatch.setattr(main, 'save_match_to_db', lambda *a: sent.append({'event': 'saved_match'}))
     main.rooms.clear()
+    main.room_limiter.reset()
+    main.stats_limiter.reset()
     yield sent
     main.rooms.clear()
 

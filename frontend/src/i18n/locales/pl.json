@@ -177,7 +177,8 @@
     "invalid_ship_placement": "Część statków stoi źle. Sprawdź, czy się nie stykają.",
     "opponent_left": "Przeciwnik opuścił pokój.",
     "opponent_forfeit": "{{nick}} opuszcza grę. Wygrywasz!",
-    "player_left": "{{nick}} opuszcza pokój."
+    "player_left": "{{nick}} opuszcza pokój.",
+    "rate_limited": "Zwolnij trochę — za dużo zapytań. Spróbuj ponownie za chwilę."
   },
   "consent": {
     "text": "Grając, akceptujesz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>."

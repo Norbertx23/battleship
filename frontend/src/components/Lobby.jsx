@@ -45,8 +45,12 @@ export default function Lobby() {
         (async () => {
             try {
                 const topRes = await fetch('/api/stats/top-players?limit=3');
-                const top = await topRes.json();
                 const recentRes = await fetch('/api/stats/recent-matches?limit=5');
+                if (topRes.status === 429 || recentRes.status === 429) {
+                    notify({ code: 'rate_limited' });
+                    return;
+                }
+                const top = await topRes.json();
                 const recent = await recentRes.json();
                 if (!alive) return;
                 setTopPlayers(Array.isArray(top) ? top : []);
@@ -56,7 +60,7 @@ export default function Lobby() {
             }
         })();
         return () => { alive = false; };
-    }, [view]);
+    }, [view, notify]);
 
     useEffect(() => {
         window.scrollTo(0, 0);

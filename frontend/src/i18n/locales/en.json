@@ -177,7 +177,8 @@
     "invalid_ship_placement": "Some ships are placed wrong. Check that they don't touch.",
     "opponent_left": "Your opponent has left the room.",
     "opponent_forfeit": "{{nick}} left the game. You win!",
-    "player_left": "{{nick}} left the room."
+    "player_left": "{{nick}} left the room.",
+    "rate_limited": "Slow down a little — too many requests. Try again in a moment."
   },
   "consent": {
     "text": "By playing, you accept the <terms>Terms of Use</terms> and the <privacy>Privacy Policy</privacy>."
