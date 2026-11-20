@@ -22,9 +22,11 @@ Nie zakładamy kont, nie zbieramy adresów e‑mail, nie używamy analityki ani 
 - Żeby pokazywać historię meczów i ranking. To publiczna część gry, w której widać nicki (art. 6 ust. 1 lit. f RODO, czyli nasz prawnie uzasadniony interes).
 - Żeby chronić serwis przed nadużyciami i atakami (art. 6 ust. 1 lit. f RODO).
 
+Nie podejmujemy wobec Ciebie decyzji w sposób zautomatyzowany i nie profilujemy Cię.
+
 ## 4. Pamięć przeglądarki
 
-Gra zapisuje w pamięci Twojej przeglądarki (localStorage i sessionStorage) Twój nick, wybrany język i dane pozwalające wrócić do bieżącej rozgrywki po odświeżeniu strony. Te dane nie opuszczają Twojego urządzenia w innym celu i możesz je usunąć, czyszcząc dane witryny. Nie używamy plików cookies śledzących ani reklamowych. Jedynie Cloudflare może zapisać techniczny plik cookie (np. `__cf_bm` lub `cf_clearance`), potrzebny do ochrony strony przed botami i atakami.
+Gra zapisuje w pamięci Twojej przeglądarki (localStorage i sessionStorage) Twój nick, wybrany język i dane pozwalające wrócić do bieżącej rozgrywki po odświeżeniu strony. Te dane nie opuszczają Twojego urządzenia w innym celu i możesz je usunąć, czyszcząc dane witryny. Nie potrzebujemy na to Twojej zgody, bo te dane są niezbędne do działania gry, z której korzystasz (art. 399 Prawa komunikacji elektronicznej), dlatego strona nie wyświetla banera cookies. Nie używamy plików cookies śledzących ani reklamowych. Jedynie Cloudflare może zapisać techniczny plik cookie (np. `__cf_bm` lub `cf_clearance`), potrzebny do ochrony strony przed botami i atakami.
 
 ## 5. Jak długo trzymamy dane
 
@@ -35,11 +37,11 @@ Gra zapisuje w pamięci Twojej przeglądarki (localStorage i sessionStorage) Tw�
 
 ## 6. Komu przekazujemy dane
 
-Serwer gry stoi na prywatnym serwerze administratora w Polsce. Ruch do gry przechodzi przez usługę **Cloudflare** (Cloudflare, Inc., USA), która łączy serwer z internetem i chroni go przed atakami. Cloudflare widzi przy tym Twój adres IP i dane techniczne połączenia i przechowuje je według własnych zasad ([polityka prywatności Cloudflare](https://www.cloudflare.com/privacypolicy/)). Cloudflare uczestniczy w programie EU‑U.S. Data Privacy Framework, który pozwala legalnie przekazywać dane do USA. Poza tym nie sprzedajemy ani nie udostępniamy danych nikomu.
+Serwer gry stoi na prywatnym serwerze administratora w Polsce. Ruch do gry przechodzi przez usługę **Cloudflare** (Cloudflare, Inc., USA), która łączy serwer z internetem i chroni go przed atakami. Cloudflare widzi przy tym Twój adres IP i dane techniczne połączenia. Przetwarza je w naszym imieniu jako podmiot przetwarzający, na podstawie swojej umowy powierzenia danych (DPA). W zakresie wykrywania botów i ataków może też działać jako samodzielny administrator, według własnych zasad ([polityka prywatności Cloudflare](https://www.cloudflare.com/privacypolicy/)). Cloudflare uczestniczy w programie EU‑U.S. Data Privacy Framework, który pozwala legalnie przekazywać dane do USA. Poza tym nie sprzedajemy ani nie udostępniamy danych nikomu.
 
 ## 7. Twoje prawa
 
-Możesz poprosić o dostęp do swoich danych, ich poprawienie lub usunięcie (np. wszystkich meczów z Twoim nickiem), ograniczenie przetwarzania, przeniesienie danych oraz wnieść sprzeciw wobec ich przetwarzania. Napisz przez [GitHub Issues](https://github.com/Norbertx23/battleship/issues), podając nick i przybliżone daty gier. Zgłoszenia na GitHubie są publiczne, więc jeśli wolisz prywatny kontakt, użyj adresu e‑mail z punktu 1. Odpowiemy w ciągu 30 dni. Usunięte dane znikają z bazy od razu, a z kopii zapasowych najpóźniej po 14 dniach. Masz też prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych.
+Możesz poprosić o dostęp do swoich danych, ich poprawienie lub usunięcie (np. wszystkich meczów z Twoim nickiem) oraz ograniczenie przetwarzania. Prawo do przeniesienia danych dotyczy danych rozgrywki przetwarzanych po to, żeby gra działała (art. 6 ust. 1 lit. b RODO). Możesz też wnieść sprzeciw wobec przetwarzania opartego na naszym prawnie uzasadnionym interesie, czyli historii meczów, rankingu i logów (art. 6 ust. 1 lit. f RODO). Napisz przez [GitHub Issues](https://github.com/Norbertx23/battleship/issues), podając nick i przybliżone daty gier. Zgłoszenia na GitHubie są publiczne, więc jeśli wolisz prywatny kontakt, użyj adresu e‑mail z punktu 1. Odpowiemy w ciągu miesiąca. Usunięte dane znikają z bazy od razu, a z kopii zapasowych najpóźniej po 14 dniach. Masz też prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych.
 
 ## 8. Zmiany
 

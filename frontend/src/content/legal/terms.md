@@ -60,7 +60,7 @@ Obowiązuje od 20 listopada 2026 r.
 
 **7.1.** Zasady przetwarzania danych opisuje [Polityka prywatności](/privacy).
 
-**7.2.** Autor może zmienić Regulamin. Nowa wersja obowiązuje od daty opublikowania na tej stronie.
+**7.2.** Autor może zmienić Regulamin. Nowa wersja obowiązuje od daty opublikowania na tej stronie i dotyczy gier rozpoczętych po jej opublikowaniu.
 
 **7.3.** W sprawach nieuregulowanych stosuje się prawo polskie, w szczególności ustawę o świadczeniu usług drogą elektroniczną i Kodeks cywilny.
 

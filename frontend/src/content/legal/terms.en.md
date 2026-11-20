@@ -60,7 +60,7 @@ Effective from 20 November 2026
 
 **7.1.** Data processing is described in the [Privacy Policy](/privacy).
 
-**7.2.** The Author may change these Terms. The new version applies from the date it is published on this page.
+**7.2.** The Author may change these Terms. The new version applies from the date it is published on this page, to games started after its publication.
 
 **7.3.** Matters not covered here are governed by Polish law, in particular the Act on Providing Services by Electronic Means and the Civil Code.
 

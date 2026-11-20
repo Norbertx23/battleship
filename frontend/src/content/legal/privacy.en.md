@@ -22,9 +22,11 @@ We don't create accounts, don't collect email addresses, and don't use analytics
 - To show the match history and the ranking. This is a public part of the game where nicknames are visible (Art. 6(1)(f) GDPR, i.e. our legitimate interest).
 - To protect the service against abuse and attacks (Art. 6(1)(f) GDPR).
 
+We don't make automated decisions about you and don't use profiling.
+
 ## 4. Browser storage
 
-The game stores in your browser (localStorage and sessionStorage) your nickname, your chosen language and the data needed to get back into the current game after a page refresh. This data doesn't leave your device for any other purpose, and you can delete it by clearing the site data. We don't use tracking or advertising cookies. Only Cloudflare may set a technical cookie (e.g. `__cf_bm` or `cf_clearance`) needed to protect the site from bots and attacks.
+The game stores in your browser (localStorage and sessionStorage) your nickname, your chosen language and the data needed to get back into the current game after a page refresh. This data doesn't leave your device for any other purpose, and you can delete it by clearing the site data. We don't need your consent for this, because the data is strictly necessary for the game you're using (Article 399 of the Polish Electronic Communications Law), which is why the site shows no cookie banner. We don't use tracking or advertising cookies. Only Cloudflare may set a technical cookie (e.g. `__cf_bm` or `cf_clearance`) needed to protect the site from bots and attacks.
 
 ## 5. How long we keep data
 
@@ -35,11 +37,11 @@ The game stores in your browser (localStorage and sessionStorage) your nickname,
 
 ## 6. Who we share data with
 
-The game runs on the controller's private server in Poland. Traffic to the game goes through **Cloudflare** (Cloudflare, Inc., USA), which connects the server to the internet and protects it from attacks. Cloudflare sees your IP address and technical connection data and stores them under its own rules ([Cloudflare privacy policy](https://www.cloudflare.com/privacypolicy/)). Cloudflare takes part in the EU‑U.S. Data Privacy Framework, which allows data to be transferred to the USA lawfully. Apart from that, we don't sell or share data with anyone.
+The game runs on the controller's private server in Poland. Traffic to the game goes through **Cloudflare** (Cloudflare, Inc., USA), which connects the server to the internet and protects it from attacks. Cloudflare sees your IP address and technical connection data. It processes them on our behalf as a processor, under its data processing agreement (DPA). For bot and attack detection it may also act as an independent controller, under its own rules ([Cloudflare privacy policy](https://www.cloudflare.com/privacypolicy/)). Cloudflare takes part in the EU‑U.S. Data Privacy Framework, which allows data to be transferred to the USA lawfully. Apart from that, we don't sell or share data with anyone.
 
 ## 7. Your rights
 
-You can ask for access to your data, its correction or deletion (e.g. all matches with your nickname), restriction of processing and data portability, and you can object to the processing. Write via [GitHub Issues](https://github.com/Norbertx23/battleship/issues), giving your nickname and the approximate dates of your games. Issues on GitHub are public, so if you prefer private contact, use the email address from section 1. We'll reply within 30 days. Deleted data disappears from the database right away and from backups within 14 days at the latest. You also have the right to lodge a complaint with the President of the Polish Personal Data Protection Office (PUODO).
+You can ask for access to your data, its correction or deletion (e.g. all matches with your nickname) and restriction of processing. The right to data portability covers game data processed to make the game work (Art. 6(1)(b) GDPR). You can also object to processing based on our legitimate interest, i.e. the match history, the ranking and the logs (Art. 6(1)(f) GDPR). Write via [GitHub Issues](https://github.com/Norbertx23/battleship/issues), giving your nickname and the approximate dates of your games. Issues on GitHub are public, so if you prefer private contact, use the email address from section 1. We'll reply within one month. Deleted data disappears from the database right away and from backups within 14 days at the latest. You also have the right to lodge a complaint with the President of the Polish Personal Data Protection Office (PUODO).
 
 ## 8. Changes
 
