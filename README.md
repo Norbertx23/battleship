@@ -1,6 +1,6 @@
 # 🚢 Battleship_NET
 
-Sieciowa gra w statki dla dwóch graczy — klasyczne zasady, cyberpunkowy interfejs i rozgrywka w czasie rzeczywistym przez WebSocket.
+Sieciowa gra w statki dla dwóch graczy - klasyczne zasady, interfejs w stylu zeszytu w kratkę i rozgrywka w czasie rzeczywistym przez WebSocket.
 
 **Zagraj online: [battleship.swistak.fun](https://battleship.swistak.fun)**
 
@@ -8,50 +8,53 @@ Sieciowa gra w statki dla dwóch graczy — klasyczne zasady, cyberpunkowy inter
 
 ## 🎮 Jak grać
 
+Interfejs jest po polsku i po angielsku. Język przełączysz w nagłówku (`PL` / `EN`), a wybór zostaje zapamiętany. Krótkie zasady są też w samej grze, w zakładce **Jak grać**.
+
 ### Rozpoczęcie
 
 Gra jest dla **dwóch osób** i opiera się na kodach pokojów:
 
-1. **Gracz 1** klika `CREATE ROOM`, wpisuje nick i wybiera konfigurację floty. Dostaje 6-znakowy kod pokoju.
-2. **Gracz 2** klika `JOIN ROOM`, wpisuje nick i wkleja otrzymany kod.
-3. Obaj gracze rozstawiają flotę i zatwierdzają — bitwa zaczyna się automatycznie.
+1. **Gracz 1** klika **Utwórz pokój**, wpisuje nick i zakreśla, ile statków każdego rozmiaru dostajecie. Dostaje 6-znakowy kod pokoju, który może skopiować przyciskiem obok kodu.
+2. **Gracz 2** wpisuje w lobby swój nick i otrzymany kod, a potem klika **Dołącz**.
+3. Obaj gracze rozstawiają statki i klikają **Gotowe - zaczynamy bitwę**. Bitwa zaczyna się, gdy gotowi są obaj.
 
 Nick jest zapamiętywany w przeglądarce, więc przy kolejnej wizycie nie trzeba go wpisywać od nowa.
 
-### Rozstawianie floty
+### Rozstawianie statków
 
 | Akcja | Sterowanie |
 |---|---|
-| Postawienie statku | przeciągnij z panelu `AVAILABLE SHIPS` na planszę |
-| Obrót | klawisz `R`, prawy przycisk myszy, lub przycisk `ROTATE` |
-| Przesunięcie | przeciągnij już postawiony statek |
-| Usunięcie | zaznacz statek i wciśnij `Delete` / `Backspace` |
+| Postawienie statku | przeciągnij statek ze **Stoczni** na swoją planszę |
+| Obrót | klawisz `R`, prawy przycisk myszy albo przycisk **Obróć** |
 | Obrót na telefonie | dotknij drugim palcem podczas przeciągania |
+| Przesunięcie | przeciągnij postawiony statek w inne miejsce |
+| Usunięcie | zaznacz statek i wciśnij `Delete` / `Backspace` albo kliknij **Usuń statek** |
+| Wyczyszczenie planszy | przycisk **Wyczyść planszę** |
 
-Statki **nie mogą się stykać** — ani bokami, ani rogami. Nieprawidłowe ustawienie podświetla się na czerwono, a przycisk `CONFIRM DEPLOYMENT` pozostaje zablokowany do momentu poprawnego rozstawienia całej floty.
+Statki **nie mogą się stykać**, ani bokami, ani rogami. Dopóki cała flota nie stoi poprawnie, przycisk startu jest zablokowany i pokazuje napis **Najpierw rozstaw wszystkie statki**.
 
 ### Bitwa
 
-- Klikasz pole na **radarze** (plansza przeciwnika), żeby strzelić.
-- **Trafienie daje kolejny ruch.** Pudło oddaje turę przeciwnikowi.
-- Nagłówek u góry jest **zielony**, gdy Twoja kolej, i **czerwony**, gdy czeka się na przeciwnika.
-- Panel `ENEMY FLEET` pokazuje, ile statków każdego rozmiaru zostało przeciwnikowi.
-- **Tryb oznaczeń** (`MARK MODE` lub prawy przycisk myszy) pozwala żółtym znacznikiem notować pola, gdzie statku na pewno nie ma. To tylko Twoja notatka — nie wysyła strzału.
+- Tytuł nad planszami mówi, czyja jest tura. Gdy widzisz **Twoja tura - strzelaj!**, kliknij puste pole na **Morzu przeciwnika**.
+- **Trafienie daje kolejny strzał.** Pudło oddaje turę przeciwnikowi.
+- Trafienie to czerwony krzyżyk, zatopiony statek jest dodatkowo zakreskowany, a pudło to kropka ołówkiem.
+- Panel **Wciąż na wodzie** pokazuje, ile statków każdego rozmiaru zostało przeciwnikowi.
+- **Zaznaczanie** (prawy przycisk myszy, dotknięcie dwoma palcami albo przycisk **Tryb zaznaczania**) koloruje pole na żółto. To tylko Twoja notatka, nie strzał. Drugie zaznaczenie tego samego pola je zmazuje.
 
 Wygrywa ten, kto pierwszy zatopi całą flotę przeciwnika.
 
 ### Po grze
 
-Po zakończeniu bitwy przycisk **`SHOW BOARD`** odsłania planszę: na **zielono** zobaczysz, gdzie stały statki przeciwnika, których nie trafiłeś. Wynik trafia do globalnej historii meczów i rankingu widocznych w lobby.
+Na ekranie końca gry widać **Flotę przeciwnika**: zakreskowane na niebiesko są statki, których nie udało Ci się znaleźć. Wynik trafia do globalnej historii meczów i rankingu widocznych w lobby.
 
-Przycisk **`PLAY AGAIN`** proponuje kolejną partię z tym samym przeciwnikiem, bez nowego kodu i ponownego łączenia. Druga strona widzi propozycję i potwierdza ją `ACCEPT PLAY AGAIN` — gdy zgodzą się obaj, plansze się czyszczą i wracacie do rozstawiania floty w tym samym pokoju. Przycisk jest dostępny zarówno w oknie wyniku, jak i w podglądzie planszy. Jeśli przeciwnik wyjdzie z pokoju, przycisk zmienia się w nieaktywne `OPPONENT LEFT`. Każda rozegrana partia trafia do historii jako osobny mecz.
+Przycisk **Zagraj ponownie** proponuje rewanż z tym samym przeciwnikiem, bez nowego kodu i ponownego łączenia. Druga strona widzi propozycję i potwierdza ją przyciskiem **Przyjmij rewanż**. Gdy zgodzą się obaj, plansze się czyszczą i wracacie do rozstawiania w tym samym pokoju. Jeśli przeciwnik wyjdzie z pokoju, przycisk zmienia się w nieaktywne **Przeciwnik wyszedł**. Każda rozegrana partia trafia do historii jako osobny mecz.
 
 ### Rozłączenie
 
-Po chwilowym zerwaniu połączenia gra **sama wraca do pokoju**. Po odświeżeniu strony (`F5`) wystarczy w tej samej karcie wejść w `JOIN ROOM` i podać ten sam kod — gra rozpozna, że to Ty.
+Po chwilowym zerwaniu połączenia gra **sama wraca do pokoju**. Po odświeżeniu strony (`F5`) wystarczy w tej samej karcie wpisać ten sam kod i kliknąć **Dołącz**, a gra rozpozna, że to Ty.
 
-- **W trakcie bitwy** masz **60 sekund na powrót** — stan gry (Twoja flota, oddane strzały, czyja kolej) zostanie odtworzony. Po tym czasie przeciwnik wygrywa walkowerem.
-- **Przed bitwą** (oczekiwanie na przeciwnika, rozstawianie floty) masz **180 sekund**. Po tym czasie opuszczasz pokój.
+- **W trakcie bitwy** masz **60 sekund na powrót**. Stan gry (Twoja flota, oddane strzały, czyja kolej) zostanie odtworzony. Po tym czasie przeciwnik wygrywa walkowerem.
+- **Przed bitwą** (oczekiwanie na przeciwnika, rozstawianie statków) masz **180 sekund**. Po tym czasie opuszczasz pokój.
 
 ---
 
@@ -269,7 +272,7 @@ deploy/           compose produkcyjny, skrypt wdrożeniowy, unit systemd
 
 **Do klienta:** `room_created`, `session`, `game_start`, `battle_start`, `shot_result`, `game_over`, `play_again_pending`, `opponent_disconnected`, `opponent_reconnected`, `game_resumed`, `rejoin_failed`, `player_disconnected`, `error`
 
-Powrót po rozłączeniu działa na tokenie sesji: przy tworzeniu lub dołączaniu do pokoju serwer wysyła zdarzenie `session` z tokenem, który klient zapisuje w `sessionStorage` (osobno dla każdej karty, więc dwie karty to dwóch różnych graczy). Po ponownym połączeniu socketu klient sam wysyła `join_room` z tym tokenem i flagą `rejoin` (po odświeżeniu strony token dołącza ręczne `JOIN ROOM` z tym samym kodem) — serwer rozpoznaje powrót tego samego gracza i odtwarza stan rozgrywki (`game_resumed`) zamiast tworzyć nowego uczestnika. Gdy powrót jest już niemożliwy (minął czas albo pokój zniknął), serwer odpowiada `rejoin_failed` i klient wraca do lobby.
+Powrót po rozłączeniu działa na tokenie sesji: przy tworzeniu lub dołączaniu do pokoju serwer wysyła zdarzenie `session` z tokenem, który klient zapisuje w `sessionStorage` (osobno dla każdej karty, więc dwie karty to dwóch różnych graczy). Po ponownym połączeniu socketu klient sam wysyła `join_room` z tym tokenem i flagą `rejoin` (po odświeżeniu strony token dołącza ręczne dołączenie przyciskiem **Dołącz** z tym samym kodem) — serwer rozpoznaje powrót tego samego gracza i odtwarza stan rozgrywki (`game_resumed`) zamiast tworzyć nowego uczestnika. Gdy powrót jest już niemożliwy (minął czas albo pokój zniknął), serwer odpowiada `rejoin_failed` i klient wraca do lobby.
 
 Ponowna gra: `play_again` od pierwszego gracza trafia do przeciwnika jako `play_again_pending`. Gdy kliknie drugi, serwer czyści stan pokoju i wysyła obu zwykłe `game_start`, więc nowa partia startuje tą samą ścieżką co pierwsza.
 
