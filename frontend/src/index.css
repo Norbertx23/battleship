@@ -1,1 +1,73 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ink: #1F3A93;
+  --color-ink-dark: #1F2A44;
+  --color-ink-deep: #142766;
+  --color-pen: #D33F2F;
+  --color-pen-dark: #B4321F;
+  --color-pencil: #5C5A55;
+  --color-muted: #6B675F;
+  --color-graphite: #3A3934;
+  --color-paper: #FBF8F1;
+  --color-paper-dim: #F4F1E8;
+  --color-highlight: #FFE873;
+  --color-ship: #DCE6FA;
+  --color-dash: #CFC8B8;
+  --color-gridline: #C9D3EE;
+  --color-placeholder: #8A8478;
+  --color-disabled: #9A968C;
+  --font-hand: "Caveat", cursive;
+  --font-body: "Nunito", system-ui, sans-serif;
+  --animate-bob: bob 2.4s ease-in-out infinite;
+  --animate-dot: dot 1.4s infinite;
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-6px) rotate(3deg); }
+  }
+
+  @keyframes dot {
+    0%, 20% { opacity: 0.2; }
+    50% { opacity: 1; }
+    100% { opacity: 0.2; }
+  }
+}
+
+@utility paper-grid {
+  background-color: var(--color-paper);
+  background-image: linear-gradient(rgba(31, 58, 147, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(31, 58, 147, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+@utility sketch-border {
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 255px 14px 225px 14px / 14px 225px 14px 255px;
+}
+
+@utility circled {
+  border-radius: 52% 46% 55% 44% / 48% 55% 45% 52%;
+  box-shadow: 0 0 0 2.5px var(--color-pen);
+}
+
+@utility note-shadow {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 10px 24px -14px rgba(60, 40, 10, 0.35);
+}
+
+@utility hatch-pen {
+  background-image: repeating-linear-gradient(45deg, rgba(211, 63, 47, 0.22) 0 3px, transparent 3px 7px);
+}
+
+@utility hatch-ink {
+  background-image: repeating-linear-gradient(-45deg, rgba(31, 58, 147, 0.12) 0 2px, transparent 2px 6px);
+}
+
+@layer base {
+  body {
+    margin: 0;
+    background-color: var(--color-paper);
+    color: var(--color-ink-dark);
+    font-family: var(--font-body);
+  }
+}
