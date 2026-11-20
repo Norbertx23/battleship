@@ -32,7 +32,8 @@ test('miejsce na komunikat bitwy jest zarezerwowane, zanim cokolwiek się pojawi
 test('plansza mieści się na wąskim ekranie (szerokość zależna od viewportu, mniejszy padding)', () => {
   const { container } = board('battle');
   const frame = container.querySelector('[data-slot="board-width"]');
-  expect(frame.className).toContain('calc(100vw');
+  expect(frame.className).toContain('w-full');
+  expect(frame.className).toContain('max-w-100');
   expect(frame.closest('section').className).toContain('p-3');
 });
 

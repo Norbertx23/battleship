@@ -78,7 +78,7 @@
     "rotH": "Rotate (horizontal)",
     "allPlaced": "all ships placed!",
     "left": "{{n}} ships left",
-    "ready": "I'm ready — start battle",
+    "ready": "I'm ready - start battle",
     "notReady": "Place every ship to continue",
     "waiting": "Waiting for your opponent…",
     "remove": "Remove ship"
@@ -87,16 +87,16 @@
     "theirSea": "Their sea",
     "afloat": "Still afloat",
     "tip": "tip: right‑click, tap with two fingers or turn on “mark” to pencil in where you think they are",
-    "hit": "{{cell}} — hit! nice one",
-    "miss": "{{cell}} — splash, missed",
+    "hit": "{{cell}} - hit! nice one",
+    "miss": "{{cell}} - splash, missed",
     "sunk": "enemy ship sunk!",
-    "opponentHit": "ouch — they hit your ship at {{cell}}",
+    "opponentHit": "ouch - they hit your ship at {{cell}}",
     "shipName": "{{n}}-mast ship",
-    "turn": "Your turn — take a shot!",
-    "enemyTurn": "Their turn — hold on…",
+    "turn": "Your turn - take a shot!",
+    "enemyTurn": "Their turn - hold on…",
     "markOn": "Marking: on",
     "markOff": "Mark mode",
-    "paused": "{{nick}} lost connection — waiting {{s}} s"
+    "paused": "{{nick}} lost connection - waiting {{s}} s"
   },
   "gameOver": {
     "back": "Back to lobby",
@@ -132,7 +132,7 @@
   },
   "rules": {
     "kicker": "quick rules, no homework",
-    "cta": "Got it — create a room",
+    "cta": "Got it - create a room",
     "s1": {
       "title": "Start a room",
       "body": "Click <b>Create room</b>, sign your name and choose how many ships of each size you both get. You'll get a code. Your friend picks <b>Join</b>, enters their name and that code."

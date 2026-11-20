@@ -38,7 +38,7 @@
     "lead": "Podpisz się i zakreśl, ile statków każdego rozmiaru dostajecie.",
     "fleet": "Flota",
     "shipName": "{{n}}-masztowiec",
-    "countLabel": "{{name}} – liczba",
+    "countLabel": "{{name}} - liczba",
     "submit": "Utwórz pokój",
     "next": "co dalej?",
     "s1": "Dostajesz kod pokoju. Wyślij go znajomemu.",
@@ -78,8 +78,8 @@
     "rotH": "Obróć (poziomo)",
     "allPlaced": "wszystkie statki ustawione!",
     "left": "zostało statków: {{n}}",
-    "ready": "Gotowe — zaczynamy bitwę",
-    "notReady": "Rozstaw wszystkie statki, żeby przejść dalej",
+    "ready": "Gotowe - zaczynamy bitwę",
+    "notReady": "Najpierw rozstaw wszystkie statki",
     "waiting": "Czekamy na przeciwnika…",
     "remove": "Usuń statek"
   },
@@ -87,16 +87,16 @@
     "theirSea": "Morze przeciwnika",
     "afloat": "Wciąż na wodzie",
     "tip": "podpowiedź: prawy przycisk, dotknięcie dwoma palcami albo „zaznaczanie” pozwala zaznaczyć ołówkiem, gdzie mogą być",
-    "hit": "{{cell}} — trafiony! brawo",
-    "miss": "{{cell}} — plusk, pudło",
+    "hit": "{{cell}} - trafiony! brawo",
+    "miss": "{{cell}} - plusk, pudło",
     "sunk": "statek przeciwnika zatopiony!",
-    "opponentHit": "auć — trafili Twój statek na {{cell}}",
+    "opponentHit": "auć - trafili Twój statek na {{cell}}",
     "shipName": "{{n}}-masztowiec",
-    "turn": "Twoja tura — strzelaj!",
-    "enemyTurn": "Tura przeciwnika — czekaj…",
+    "turn": "Twoja tura - strzelaj!",
+    "enemyTurn": "Tura przeciwnika - czekaj…",
     "markOn": "Zaznaczanie: wł.",
     "markOff": "Tryb zaznaczania",
-    "paused": "{{nick}}: brak połączenia — czekamy {{s}} s"
+    "paused": "{{nick}}: brak połączenia - czekamy {{s}} s"
   },
   "gameOver": {
     "back": "Wróć do lobby",
@@ -132,7 +132,7 @@
   },
   "rules": {
     "kicker": "krótkie zasady, bez zadania domowego",
-    "cta": "Jasne — utwórz pokój",
+    "cta": "Jasne - utwórz pokój",
     "s1": {
       "title": "Załóż pokój",
       "body": "Kliknij <b>Utwórz pokój</b>, podpisz się i wybierz, ile statków każdego rozmiaru dostajecie. Dostaniesz kod. Znajomy wybiera <b>Dołącz</b>, wpisuje swoje imię i ten kod."

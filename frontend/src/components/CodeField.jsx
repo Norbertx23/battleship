@@ -56,16 +56,16 @@ export default function CodeField({ code, revealable = false, size = 'lg' }) {
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <span className={`px-3 font-hand text-[72px] leading-[1.1] font-bold tracking-[0.14em] text-ink select-all ${revealed ? 'bg-highlight' : ''}`}>
+      <span className={`px-3 font-hand text-7xl leading-[1.1] font-bold tracking-[0.14em] text-ink select-all`}>
         {revealed ? code : HIDDEN}
       </span>
       <div className="flex flex-wrap justify-center gap-3">
         {revealable && (
-          <button type="button" onClick={() => setRevealed((v) => !v)} className="sketch-border inline-flex min-h-11 cursor-pointer items-center gap-2 border-ink-dark bg-white px-5 text-[15px] font-extrabold text-ink-dark transition-transform hover:-translate-y-0.5 hover:-rotate-1">
+          <button type="button" onClick={() => setRevealed((v) => !v)} className="sketch-border whitespace-nowrap inline-flex min-h-11 cursor-pointer items-center gap-2 border-ink-dark bg-white px-5 text-base font-extrabold text-ink-dark transition-transform hover:-translate-y-0.5 hover:-rotate-1">
             {revealed ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}{toggleLabel}
           </button>
         )}
-        <button type="button" onClick={copy} className="sketch-border inline-flex min-h-11 cursor-pointer items-center gap-2 border-ink bg-ink px-5 text-[15px] font-extrabold text-white transition-transform hover:-translate-y-0.5 hover:-rotate-1">
+        <button type="button" onClick={copy} className="sketch-border whitespace-nowrap inline-flex min-h-11 cursor-pointer items-center gap-2 border-ink bg-ink px-5 text-base font-extrabold text-white transition-transform hover:-translate-y-0.5 hover:-rotate-1">
           {copied ? <Check size={18} aria-hidden="true" /> : <Copy size={18} aria-hidden="true" />}{copyLabel}
         </button>
       </div>

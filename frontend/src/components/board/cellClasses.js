@@ -1,4 +1,4 @@
-const BASE = 'relative flex aspect-square min-w-0 items-center justify-center border-0 border-r border-b border-gridline p-0 font-hand text-[clamp(14px,2.2vw,26px)] font-bold leading-none';
+const BASE = 'relative flex aspect-square min-w-0 items-center justify-center border-0 border-r border-b border-gridline p-0 font-hand text-xl md:text-2xl font-bold leading-none';
 const CROSS = "after:content-['✕']";
 
 const KINDS = {

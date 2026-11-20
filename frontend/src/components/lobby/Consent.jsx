@@ -3,7 +3,7 @@ import { Trans } from 'react-i18next';
 
 export default function Consent({ className = '' }) {
   return (
-    <p className={`m-0 text-[13px] text-muted ${className}`}>
+    <p className={`m-0 text-sm text-muted ${className}`}>
       <Trans
         i18nKey="consent.text"
         components={{

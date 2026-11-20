@@ -1,11 +1,11 @@
 const COLS = 'ABCDEFGHIJ'.split('');
 const ROWS = Array.from({ length: 10 }, (_, i) => i + 1);
-const AXIS = 'grid items-center text-center font-hand text-[clamp(14px,1.6vw,20px)] font-bold text-pencil';
+const AXIS = 'grid items-center text-center font-hand text-base md:text-xl font-bold text-pencil';
 
 export default function BoardFrame({ children, label, boardProps = {} }) {
   const { className: extra = '', ...rest } = boardProps;
   return (
-    <div className="grid w-full grid-cols-[22px_minmax(0,1fr)] grid-rows-[22px_auto] gap-1">
+    <div className="grid w-full grid-cols-[1.375rem_minmax(0,1fr)] grid-rows-[1.375rem_auto] gap-1">
       <span />
       <div aria-hidden="true" className={`${AXIS} grid-cols-10`}>
         {COLS.map((c) => <span key={c}>{c}</span>)}

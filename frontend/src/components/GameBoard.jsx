@@ -12,7 +12,7 @@ const createEmptyBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
 const COLS = 'ABCDEFGHIJ';
 const cellLabel = (i) => `${COLS[i % BOARD_SIZE]}${Math.floor(i / BOARD_SIZE) + 1}`;
-const BOARD_WIDTH = 'w-[min(400px,calc(100vw-76px))] lg:w-[clamp(320px,min(26vw,50vh),440px)]';
+const BOARD_WIDTH = 'w-full max-w-100 md:w-100 md:portrait:w-80';
 
 const overlayCells = (ship) => {
     const rot = (ship.rotation % 360 + 360) % 360;
@@ -485,15 +485,15 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
         : opponentHitMessage ? t('battle.opponentHit', { cell: opponentHitMessage }) : null;
 
     const players = (
-        <span className="flex flex-wrap items-center gap-x-1.5 text-[15px] text-pencil">
+        <span className="flex flex-wrap items-center gap-x-1.5 text-base text-pencil">
             <span className="max-w-[12ch] truncate font-bold text-ink-dark" title={nick}>{nick}</span>
             {opponent && <><span className="font-hand text-2xl text-pen">vs</span><span className="max-w-[12ch] truncate font-bold text-ink-dark" title={opponent}>{opponent}</span></>}
             {roomCode && <><span>· {t('game.room')}</span><CodeField code={roomCode} revealable size="sm" /></>}
         </span>
     );
 
-    const note = 'flex flex-col items-center gap-3.5 bg-white p-3 sm:p-[22px] note-shadow';
-    const h2Hand = 'm-0 self-start font-hand text-[32px] font-bold';
+    const note = 'flex flex-col items-center gap-3.5 bg-white p-3 sm:p-5.5 note-shadow';
+    const h2Hand = 'm-0 self-start font-hand text-3xl font-bold';
 
     const myBoardSection = (
         <section className={`${note} -rotate-[0.4deg]`}>
@@ -573,13 +573,13 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
     const radarSection = (
         <section className={`${note} rotate-[0.6deg]`}>
             <div className="flex flex-wrap items-center justify-between gap-3 self-stretch">
-                <h2 className="m-0 font-hand text-[32px] font-bold">{phase === 'game_over' ? t('gameOver.theirFleet') : t('battle.theirSea')}</h2>
+                <h2 className="m-0 font-hand text-3xl font-bold">{phase === 'game_over' ? t('gameOver.theirFleet') : t('battle.theirSea')}</h2>
                 {phase === 'battle' && (
                     <button
                         type="button"
                         onClick={() => setIsMarkMode(v => !v)}
                         aria-pressed={isMarkMode}
-                        className={`sketch-border min-h-10 cursor-pointer border-ink-dark px-4 text-sm font-extrabold text-ink-dark ${isMarkMode ? 'bg-highlight' : 'bg-white'}`}
+                        className={`sketch-border whitespace-nowrap min-h-10 cursor-pointer border-ink-dark px-4 text-sm font-extrabold text-ink-dark ${isMarkMode ? 'bg-highlight' : 'bg-white'}`}
                     >
                         {isMarkMode ? t('battle.markOn') : t('battle.markOff')}
                     </button>
@@ -609,14 +609,14 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
     );
 
     const fleetAside = (
-        <aside className="flex max-w-[280px] flex-[1_1_220px] -rotate-1 flex-col gap-2.5 bg-white p-[22px] note-shadow">
-            <h2 className="m-0 mb-1 font-hand text-[30px] font-bold">{t('battle.afloat')}</h2>
+        <aside className="flex max-w-70 flex-[1_1_13.75rem] -rotate-1 flex-col gap-2.5 bg-white p-5.5 note-shadow">
+            <h2 className="m-0 mb-1 font-hand text-3xl font-bold">{t('battle.afloat')}</h2>
             {shipCategories.flatMap(({ size, maxCount }) => {
                 const sunk = enemySunkShips.filter(s => s === size).length;
                 return Array.from({ length: maxCount }, (_, k) => {
                     const isSunk = k < sunk;
                     return (
-                        <div key={`${size}-${k}`} className="flex items-center justify-between gap-2.5 text-[15px]">
+                        <div key={`${size}-${k}`} className="flex items-center justify-between gap-2.5 text-base">
                             <span className={isSunk ? 'text-placeholder line-through decoration-pen decoration-2' : ''}>{t('battle.shipName', { n: size })}</span>
                             <span aria-hidden="true" className="flex gap-0.5">
                                 {Array.from({ length: size }).map((__, p) => (
@@ -627,13 +627,13 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
                     );
                 });
             })}
-            <p className="m-0 mt-2.5 font-hand text-[22px] leading-tight text-pencil">{t('battle.tip')}</p>
+            <p className="m-0 mt-2.5 font-hand text-2xl leading-tight text-pencil">{t('battle.tip')}</p>
         </aside>
     );
 
     const legendAside = (
-        <aside className="flex max-w-[260px] flex-[1_1_200px] -rotate-1 flex-col gap-2.5 bg-white p-5 text-sm text-[#4A4843] note-shadow">
-            <h2 className="m-0 font-hand text-[26px] font-bold text-ink-dark">{t('gameOver.key')}</h2>
+        <aside className="flex max-w-65 flex-[1_1_12.5rem] -rotate-1 flex-col gap-2.5 bg-white p-5 text-sm text-[#4A4843] note-shadow">
+            <h2 className="m-0 font-hand text-2xl font-bold text-ink-dark">{t('gameOver.key')}</h2>
             <div className="flex items-center gap-2.5"><span className={`${cellClasses('sunk')} w-6 border border-gridline`} />{t('gameOver.sunk')}</div>
             <div className="flex items-center gap-2.5"><span className={`${cellClasses('miss')} w-6 border border-gridline`} />{t('gameOver.miss')}</div>
             <div className="flex items-center gap-2.5"><span className={`${cellClasses('ghost')} w-6`} />{t('gameOver.never')}</div>
@@ -641,10 +641,10 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
     );
 
     const shipyard = (
-        <aside className="flex max-w-[360px] flex-[1_1_300px] flex-col gap-5">
+        <aside className="flex max-w-90 flex-[1_1_18.75rem] flex-col gap-5">
             <section className="relative flex rotate-[0.6deg] flex-col gap-2 bg-white px-5 pt-6 pb-5 note-shadow">
                 <span aria-hidden="true" className="absolute -top-3 left-1/2 h-6 w-24 -ml-12 -rotate-3 bg-[rgba(244,217,120,0.75)]" />
-                <h2 className="m-0 mb-1.5 font-hand text-[30px] font-bold text-ink">{t('deploy.shipyard')}</h2>
+                <h2 className="m-0 mb-1.5 font-hand text-3xl font-bold text-ink">{t('deploy.shipyard')}</h2>
                 {shipCategories.map(({ size, maxCount }) => {
                     const left = maxCount - myShips.filter(s => s.size === size).length;
                     const available = left > 0;
@@ -659,19 +659,19 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
                                     <span key={i} className="size-5 bg-ship shadow-[inset_0_0_0_2px_var(--color-ink)]" />
                                 ))}
                             </div>
-                            <span className="flex-grow text-[15px] font-extrabold">{t('deploy.mast', { n: size })}</span>
+                            <span className="flex-grow text-base font-extrabold">{t('deploy.mast', { n: size })}</span>
                             <span className={`font-hand text-2xl font-bold ${available ? 'text-ink' : 'text-pencil'}`}>{available ? `× ${left}` : t('deploy.done')}</span>
                         </div>
                     );
                 })}
                 <div className="mt-2 flex flex-wrap gap-2.5">
-                    <button type="button" onClick={handleRotate} className="sketch-border inline-flex min-h-11 flex-[1_1_120px] cursor-pointer items-center justify-center gap-2 border-ink-dark bg-white text-[15px] font-extrabold text-ink-dark">
+                    <button type="button" onClick={handleRotate} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-ink-dark bg-white text-base font-extrabold text-ink-dark">
                         <RotateCw size={18} aria-hidden="true" />{globalRotation % 180 === 0 ? t('deploy.rotH') : t('deploy.rotV')}
                     </button>
-                    <button type="button" onClick={() => selectedShipId && handleRemoveShip(selectedShipId)} disabled={!selectedShipId} className="sketch-border inline-flex min-h-11 flex-[1_1_120px] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-[15px] font-extrabold text-pen-dark disabled:cursor-not-allowed disabled:opacity-40">
+                    <button type="button" onClick={() => selectedShipId && handleRemoveShip(selectedShipId)} disabled={!selectedShipId} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-base font-extrabold text-pen-dark disabled:cursor-not-allowed disabled:opacity-40">
                         <X size={18} aria-hidden="true" />{t('deploy.remove')}
                     </button>
-                    <button type="button" onClick={handleClearBoard} className="sketch-border inline-flex min-h-11 flex-[1_1_120px] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-[15px] font-extrabold text-pen-dark">
+                    <button type="button" onClick={handleClearBoard} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-base font-extrabold text-pen-dark">
                         <Trash2 size={18} aria-hidden="true" />{t('deploy.clear')}
                     </button>
                 </div>
@@ -679,7 +679,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
 
             <ul className="m-0 flex list-none flex-col gap-2 px-1 text-sm text-[#4A4843]">
                 <li>{t('deploy.tip1')}</li>
-                <li><kbd className="rounded-[5px] border-[1.5px] border-ink-dark bg-white px-1.5 text-[13px] font-extrabold">R</kbd> {t('deploy.tip2')}</li>
+                <li><kbd className="rounded-md border-[1.5px] border-ink-dark bg-white px-1.5 text-sm font-extrabold">R</kbd> {t('deploy.tip2')}</li>
                 <li>{t('deploy.tip3')}</li>
             </ul>
 
@@ -687,7 +687,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
                 type="button"
                 onClick={handleConfirmPlacement}
                 disabled={!canConfirm}
-                className={`sketch-border min-h-14 text-lg font-extrabold text-white ${canConfirm ? 'cursor-pointer border-ink bg-ink' : 'cursor-not-allowed border-disabled bg-disabled'}`}
+                className={`sketch-border whitespace-nowrap min-h-14 text-lg font-extrabold text-white ${canConfirm ? 'cursor-pointer border-ink bg-ink' : 'cursor-not-allowed border-disabled bg-disabled'}`}
             >
                 {canConfirm ? t('deploy.ready') : t('deploy.notReady')}
             </button>
@@ -695,44 +695,44 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
     );
 
     return (
-        <PaperLayout withNav={false} withFooter={false} headerRight={players} gap="gap-6">
+        <PaperLayout withNav={false} withFooter={false} headerRight={players} gap="gap-4" padding="pt-5 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <button type="button" onClick={onLeave} className="inline-flex min-h-11 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 font-bold text-ink-dark">
                     <ArrowLeft size={20} aria-hidden="true" />{phase === 'game_over' ? t('gameOver.back') : t('game.leave')}
                 </button>
-                {phase === 'placement' && <span className="font-hand text-[22px] text-pencil">{shipsLeft === 0 ? t('deploy.allPlaced') : t('deploy.left', { n: shipsLeft })}</span>}
+                {phase === 'placement' && <span className="font-hand text-2xl text-pencil">{shipsLeft === 0 ? t('deploy.allPlaced') : t('deploy.left', { n: shipsLeft })}</span>}
             </div>
 
             {phase === 'game_over' ? (
                 <section className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 text-center">
                     <div className="flex flex-col items-center gap-1">
-                        <h1 className={`m-0 font-hand text-[clamp(64px,9vw,112px)] leading-[1.1] font-bold underline decoration-pen decoration-wavy decoration-[3px] underline-offset-[16px] ${result === 'VICTORY' ? 'text-ink' : 'text-pen-dark'}`}>
+                        <h1 className={`m-0 font-hand text-6xl md:text-8xl leading-[1.1] font-bold underline decoration-pen decoration-wavy decoration-[3px] underline-offset-[16px] ${result === 'VICTORY' ? 'text-ink' : 'text-pen-dark'}`}>
                             {result === 'VICTORY' ? t('gameOver.won') : t('gameOver.lost')}
                         </h1>
-                        <p className="m-0 mt-4 max-w-[460px] text-lg text-[#4A4843]">
+                        <p className="m-0 mt-4 max-w-115 text-lg text-[#4A4843]">
                             {result === 'VICTORY' ? t('gameOver.wonSub', { nick: opponentName }) : t('gameOver.lostSub', { nick: opponentName })}
                         </p>
                     </div>
-                    <div className="flex min-w-[260px] flex-col gap-3">
+                    <div className="flex min-w-65 flex-col gap-3">
                         <button
                             type="button"
                             onClick={handlePlayAgain}
                             disabled={playAgainDisabled}
-                            className={`sketch-border min-h-14 px-7 text-lg font-extrabold text-white ${playAgainDisabled ? 'cursor-not-allowed border-disabled bg-disabled' : playAgain === 'asked' ? 'cursor-pointer border-pen bg-pen' : 'cursor-pointer border-ink bg-ink'}`}
+                            className={`sketch-border whitespace-nowrap min-h-14 px-7 text-lg font-extrabold text-white ${playAgainDisabled ? 'cursor-not-allowed border-disabled bg-disabled' : playAgain === 'asked' ? 'cursor-pointer border-pen bg-pen' : 'cursor-pointer border-ink bg-ink'}`}
                         >
                             {playAgainLabel}
                         </button>
-                        <span role="status" className="min-h-[26px] font-hand text-[22px] text-pencil">{playAgainHint}</span>
+                        <span role="status" className="min-h-6.5 font-hand text-2xl text-pencil">{playAgainHint}</span>
                     </div>
                 </section>
             ) : (
-                <h1 className="m-0 text-center font-hand text-[44px] leading-none font-bold text-ink">{title}</h1>
+                <h1 className="m-0 text-center font-hand text-5xl leading-none font-bold text-ink">{title}</h1>
             )}
 
             {phase === 'battle' && (
-                <div data-slot="battle-status" role="status" className="flex min-h-[44px] items-center justify-center">
+                <div data-slot="battle-status" role="status" className="flex min-h-11 items-center justify-center">
                     {status && (
-                        <span className="-rotate-1 bg-white px-[18px] py-1 font-hand text-[26px] text-pen-dark shadow-[0_6px_16px_-10px_rgba(60,40,10,0.4)]">{status}</span>
+                        <span className="-rotate-1 bg-white px-4.5 py-1 font-hand text-2xl text-pen-dark shadow-[0_6px_16px_-10px_rgba(60,40,10,0.4)]">{status}</span>
                     )}
                 </div>
             )}
@@ -743,14 +743,14 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
                 {phase === 'battle' && fleetAside}
                 {phase === 'game_over' && legendAside}
                 {(phase === 'placement' || phase === 'waiting') && (phase === 'placement' ? shipyard : (
-                    <aside role="status" className="flex max-w-[360px] flex-[1_1_300px] items-center justify-center p-6 font-hand text-[28px] text-pencil">{t('deploy.waiting')}</aside>
+                    <aside role="status" className="flex max-w-90 flex-[1_1_18.75rem] items-center justify-center p-6 font-hand text-3xl text-pencil">{t('deploy.waiting')}</aside>
                 ))}
             </main>
 
             {graceInfo && phase === 'battle' && (
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-paper/85 px-4">
                     <div role="alertdialog" aria-live="assertive" className="flex w-full max-w-md -rotate-1 flex-col items-center gap-4 bg-white p-8 text-center note-shadow">
-                        <p className="m-0 font-hand text-[30px] font-bold text-pen-dark">{t('battle.paused', { nick: graceInfo.nick || opponentName, s: graceInfo.secondsLeft })}</p>
+                        <p className="m-0 font-hand text-3xl font-bold text-pen-dark">{t('battle.paused', { nick: graceInfo.nick || opponentName, s: graceInfo.secondsLeft })}</p>
                         {roomCode && <CodeField code={roomCode} revealable size="sm" />}
                     </div>
                 </div>

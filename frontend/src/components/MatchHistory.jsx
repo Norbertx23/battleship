@@ -7,8 +7,8 @@ import { formatMatchDate } from '../utils/formatMatchDate';
 
 const LIMIT = 10;
 const DEBOUNCE_MS = 300;
-const ROW = 'grid grid-cols-[minmax(0,1fr)_48px_minmax(0,1fr)_130px] gap-x-3';
-const PAGE_BTN = 'h-11 min-w-11 cursor-pointer border-0 bg-transparent px-1.5 font-hand text-[26px] font-bold text-pencil disabled:cursor-not-allowed disabled:opacity-40';
+const ROW = 'grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)_8rem] gap-x-3';
+const PAGE_BTN = 'h-11 min-w-11 cursor-pointer border-0 bg-transparent px-1.5 font-hand text-2xl font-bold text-pencil disabled:cursor-not-allowed disabled:opacity-40';
 
 const pageWindow = (page, maxPage) => {
     const start = Math.max(1, Math.min(page - 2, maxPage - 4));
@@ -27,12 +27,14 @@ export default function MatchHistory() {
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
+        const next = query.trim();
+        if (next === search) return undefined;
         const timer = setTimeout(() => {
-            setSearch(query.trim());
+            setSearch(next);
             setPage(1);
         }, DEBOUNCE_MS);
         return () => clearTimeout(timer);
-    }, [query]);
+    }, [query, search]);
 
     useEffect(() => {
         let alive = true;
@@ -54,18 +56,18 @@ export default function MatchHistory() {
         <PaperLayout active="history">
             <div className="flex flex-wrap items-end justify-between gap-5">
                 <div className="flex flex-col gap-1">
-                    <span className="-rotate-2 self-start font-hand text-[26px] text-pen">{t('history.kicker')}</span>
-                    <h1 className="m-0 text-[44px] font-extrabold tracking-[-0.02em]">{t('nav.history')}</h1>
+                    <span className="-rotate-2 self-start font-hand text-2xl text-pen">{t('history.kicker')}</span>
+                    <h1 className="m-0 text-5xl font-extrabold tracking-[-0.02em]">{t('nav.history')}</h1>
                 </div>
-                <div className="flex w-[min(320px,100%)] flex-col gap-0.5">
-                    <label htmlFor="history-search" className="text-[13px] font-bold text-pencil">{t('history.find')}</label>
+                <div className="flex w-full md:w-80 flex-col gap-0.5">
+                    <label htmlFor="history-search" className="text-sm font-bold text-pencil">{t('history.find')}</label>
                     <input
                         id="history-search"
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder={t('history.findPh')}
-                        className="h-[46px] w-full border-0 border-b-2 border-ink-dark bg-transparent px-1 font-hand text-[28px] text-ink outline-none placeholder:text-placeholder focus:border-pen"
+                        className="h-11.5 w-full border-0 border-b-2 border-ink-dark bg-transparent px-1 font-hand text-3xl text-ink outline-none placeholder:text-placeholder focus:border-pen"
                     />
                 </div>
             </div>
@@ -73,8 +75,8 @@ export default function MatchHistory() {
             <section className="relative -rotate-[0.3deg] bg-white px-7 pt-7 pb-5 note-shadow">
                 <span aria-hidden="true" className="absolute -top-3 left-1/2 h-6 w-24 -ml-12 -rotate-3 bg-[rgba(244,217,120,0.75)]" />
                 <div className="overflow-x-auto">
-                    <div className="min-w-[480px]">
-                        <div className={`${ROW} border-b-2 border-ink-dark pb-2.5 text-[13px] font-extrabold tracking-[0.06em] text-pencil uppercase`}>
+                    <div className="min-w-120">
+                        <div className={`${ROW} border-b-2 border-ink-dark pb-2.5 text-sm font-extrabold tracking-[0.06em] text-pencil uppercase`}>
                             <span>{t('history.winner')}</span><span /><span>{t('history.defeated')}</span><span className="text-right">{t('history.played')}</span>
                         </div>
                         {matches.map((m, idx) => {
@@ -83,14 +85,14 @@ export default function MatchHistory() {
                             return (
                                 <div key={idx} title={`${m.winner_nick} ${t('history.sank')} ${loser} · ${date}`} className={`${ROW} items-baseline border-b border-dashed border-dash py-3 text-base`}>
                                     <strong className="truncate">{m.winner_nick}</strong>
-                                    <span className="font-hand text-[22px] leading-none text-pencil">{t('history.sank')}</span>
+                                    <span className="font-hand text-2xl leading-none text-pencil">{t('history.sank')}</span>
                                     <span className="truncate text-pen-dark line-through">{loser}</span>
                                     <span className="whitespace-nowrap text-right text-sm text-muted">{date}</span>
                                 </div>
                             );
                         })}
                         {loaded && matches.length === 0 && (
-                            <p className="m-0 py-6 text-center font-hand text-[28px] text-pencil">{t('history.empty')}</p>
+                            <p className="m-0 py-6 text-center font-hand text-3xl text-pencil">{t('history.empty')}</p>
                         )}
                     </div>
                 </div>
@@ -111,7 +113,7 @@ export default function MatchHistory() {
                     <button type="button" aria-label={t('history.next')} disabled={page >= maxPage} onClick={() => setPage((p) => Math.min(maxPage, p + 1))} className={PAGE_BTN}>›</button>
                 </nav>
 
-                <p className="m-0 mt-[18px] flex items-start gap-2.5 text-sm leading-normal text-pencil">
+                <p className="m-0 mt-4.5 flex items-start gap-2.5 text-sm leading-normal text-pencil">
                     <Info size={18} aria-hidden="true" className="mt-0.5 shrink-0" />
                     <span>
                         <Trans i18nKey="history.note" components={{ a: <a href={`${REPO_URL}/issues`} className="text-ink" /> }} />
