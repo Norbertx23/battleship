@@ -35,3 +35,4 @@ pnpm-debug.log*
 # Documentation
 *.md
 !README.md
+!frontend/src/content/legal/*.md
