@@ -12,7 +12,7 @@ import CreateRoom from './create/CreateRoom';
 import RoomCode from './create/RoomCode';
 import GameBoard from './GameBoard';
 
-const cardBase = 'sketch-border flex flex-[1_1_13.75rem] flex-col gap-1.5 px-6.5 py-5.5 no-underline transition-transform hover:-translate-y-0.5 hover:-rotate-1';
+const cardBase = 'sketch-border flex flex-[1_1_17rem] flex-col gap-1.5 px-6.5 py-5.5 no-underline transition-transform hover:-translate-y-0.5 hover:-rotate-1';
 
 export default function Lobby() {
     const { t } = useTranslation();

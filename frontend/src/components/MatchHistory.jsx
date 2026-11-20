@@ -7,7 +7,7 @@ import { formatMatchDate } from '../utils/formatMatchDate';
 
 const LIMIT = 10;
 const DEBOUNCE_MS = 300;
-const ROW = 'grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)_8rem] gap-x-3';
+const ROW = 'grid grid-cols-[minmax(0,1fr)_5rem_minmax(0,1fr)_8rem] gap-x-3';
 const PAGE_BTN = 'h-11 min-w-11 cursor-pointer border-0 bg-transparent px-1.5 font-hand text-2xl font-bold text-pencil disabled:cursor-not-allowed disabled:opacity-40';
 
 const pageWindow = (page, maxPage) => {
