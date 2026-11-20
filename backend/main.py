@@ -1,3 +1,4 @@
+import os
 import random
 import asyncio
 
@@ -11,9 +12,24 @@ import socketio
 import uuid
 from sqlalchemy import or_
 import game_manager as gm
+from rate_limit import RateLimiter, client_ip
 
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
-fastapi_app = FastAPI()
+DEFAULT_ORIGINS = ['https://battleship.swistak.fun', 'http://localhost:3000', 'http://localhost:5173']
+MAX_MESSAGE_BYTES = 64 * 1024
+
+
+def parse_origins(raw):
+    if not raw:
+        return DEFAULT_ORIGINS
+    return [o.strip() for o in raw.split(',') if o.strip()]
+
+
+sio = socketio.AsyncServer(
+    async_mode='asgi',
+    cors_allowed_origins=parse_origins(os.getenv('ALLOWED_ORIGINS')),
+    max_http_buffer_size=MAX_MESSAGE_BYTES,
+)
+fastapi_app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 app = socketio.ASGIApp(sio, fastapi_app)
 
@@ -22,6 +38,35 @@ rooms = {}
 GRACE_PERIOD = 60
 LOBBY_GRACE_PERIOD = 180
 MAX_NICK_LENGTH = 30
+
+STATS_LIMIT = 60
+ROOM_LIMIT = 10
+LIMIT_WINDOW = 60
+RATE_LIMITED_MESSAGE = 'Too many requests. Try again in a moment.'
+
+stats_limiter = RateLimiter(STATS_LIMIT, LIMIT_WINDOW)
+room_limiter = RateLimiter(ROOM_LIMIT, LIMIT_WINDOW)
+sid_ips = {}
+
+
+@fastapi_app.middleware('http')
+async def limit_stats(request, call_next):
+    if request.url.path.startswith('/stats'):
+        ip = client_ip(request.headers, request.client.host if request.client else 'unknown')
+        if not stats_limiter.hit(ip):
+            return JSONResponse(
+                status_code=429,
+                content={'code': 'rate_limited', 'message': RATE_LIMITED_MESSAGE},
+                headers={'Retry-After': str(stats_limiter.retry_after(ip))},
+            )
+    return await call_next(request)
+
+
+async def room_rate_ok(sid):
+    if room_limiter.hit(sid_ips.get(sid, sid)):
+        return True
+    await sio.emit('error', {'code': 'rate_limited', 'message': RATE_LIMITED_MESSAGE}, to=sid)
+    return False
 
 
 def clean_nick(nick):
@@ -34,6 +79,11 @@ def clean_nick(nick):
 
 @sio.event
 async def connect(sid, environ):
+    headers = {
+        'cf-connecting-ip': environ.get('HTTP_CF_CONNECTING_IP'),
+        'x-forwarded-for': environ.get('HTTP_X_FORWARDED_FOR'),
+    }
+    sid_ips[sid] = client_ip(headers, environ.get('REMOTE_ADDR', sid))
     print("connect ", sid)
 
 def cancel_pending(room_data):
@@ -259,6 +309,7 @@ async def do_rejoin(new_sid, room_id, old_sid):
 
 @sio.event
 async def play_again(sid, data):
+    data = data if isinstance(data, dict) else {}
     room = rooms.get(data.get('room_id'))
     if not room or room.get('status') != 'finished' or sid not in room['players']:
         return
@@ -282,12 +333,14 @@ async def play_again(sid, data):
 
 @sio.event
 async def leave_room(sid, data):
+    data = data if isinstance(data, dict) else {}
     room_id = data.get('room_id')
     await handle_leave(sid, room_id)
 
 @sio.event
 async def disconnect(sid):
     print("disconnect ", sid)
+    sid_ips.pop(sid, None)
     for room_id, room_data in list(rooms.items()):
         if sid not in room_data['players']:
             continue
@@ -306,6 +359,9 @@ async def disconnect(sid):
 
 @sio.event
 async def create_room(sid, data):
+    data = data if isinstance(data, dict) else {}
+    if not await room_rate_ok(sid):
+        return
     nick = clean_nick(data.get('nick'))
     if not nick:
         await sio.emit('error', {'code': 'invalid_nickname', 'message': 'Invalid nickname.'}, to=sid)
@@ -335,11 +391,14 @@ async def create_room(sid, data):
 
 @sio.event
 async def join_room(sid, data):
-    room_id = data['room_id']
+    data = data if isinstance(data, dict) else {}
+    if not await room_rate_ok(sid):
+        return
+    room_id = data.get('room_id')
     is_rejoin = bool(data.get('rejoin'))
     provided = data.get('token')
 
-    if room_id not in rooms:
+    if not isinstance(room_id, str) or room_id not in rooms:
         await fail_join(sid, 'room_not_found_or_full', 'Room does not exist or is full', is_rejoin)
         return
 
@@ -387,6 +446,7 @@ def get_db():
 
 @sio.event
 async def place_ships(sid, data):
+    data = data if isinstance(data, dict) else {}
     room_id = data.get('room_id')
     ships = data.get('ships')
     room = rooms.get(room_id)
@@ -427,6 +487,7 @@ def save_match_to_db(winner_nick, player1_nick, player2_nick):
 
 @sio.event
 async def fire_shot(sid, data):
+    data = data if isinstance(data, dict) else {}
     print(f"SHOT FIRED by {sid}: {data}")
 
     room_id = data.get('room_id')

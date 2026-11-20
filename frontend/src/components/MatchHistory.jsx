@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import PaperLayout from './layout/PaperLayout';
 import { REPO_URL } from './layout/Footer';
 import { formatMatchDate } from '../utils/formatMatchDate';
+import { useNotice } from '../notice/useNotice';
 
 const LIMIT = 10;
 const DEBOUNCE_MS = 300;
@@ -19,6 +20,7 @@ const pageWindow = (page, maxPage) => {
 export default function MatchHistory() {
     const { t, i18n } = useTranslation();
     const lang = i18n.resolvedLanguage;
+    const { notify } = useNotice();
     const [query, setQuery] = useState('');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
@@ -39,16 +41,22 @@ export default function MatchHistory() {
     useEffect(() => {
         let alive = true;
         fetch(`/api/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
-            .then((res) => res.json())
+            .then((res) => {
+                if (res.status === 429) {
+                    notify({ code: 'rate_limited' });
+                    return null;
+                }
+                return res.json();
+            })
             .then((data) => {
-                if (!alive) return;
+                if (!alive || !data) return;
                 setMatches(data.items || []);
                 setTotal(data.total || 0);
                 setLoaded(true);
             })
             .catch((err) => console.error(err));
         return () => { alive = false; };
-    }, [page, search]);
+    }, [page, search, notify]);
 
     const maxPage = Math.max(1, Math.ceil(total / LIMIT));
 
