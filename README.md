@@ -61,6 +61,9 @@ Po chwilowym zerwaniu połączenia gra **sama wraca do pokoju**. Po odświeżeni
 - React 19 + Vite 7
 - Tailwind CSS 4
 - Socket.IO client — komunikacja w czasie rzeczywistym
+- react-i18next — interfejs po angielsku i po polsku
+- react-markdown — regulamin i polityka prywatności z plików `.md`
+- Vitest + Testing Library — testy frontendu
 
 **Backend**
 - Python 3.12 + FastAPI
@@ -285,4 +288,13 @@ Niepoprawne strzały serwer pomija bez odpowiedzi, bo normalny klient i tak ich 
 
 ## 📄 Licencja
 
-ISC
+Kod gry jest udostępniony na licencji **MIT** (plik [`LICENSE`](LICENSE)).
+
+Wykorzystane zasoby i ich licencje:
+
+| Zasób | Licencja |
+|---|---|
+| Ikony [Lucide](https://lucide.dev) (`lucide-react`) | ISC |
+| Logo GitHuba z [Simple Icons](https://simpleicons.org) | CC0 |
+| Fonty Caveat i Nunito (`@fontsource`) | SIL Open Font License 1.1 |
+| react-i18next, i18next, react-markdown | MIT |
