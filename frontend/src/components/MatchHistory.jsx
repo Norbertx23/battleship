@@ -1,136 +1,123 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import { Info } from 'lucide-react';
+import PaperLayout from './layout/PaperLayout';
+import { REPO_URL } from './layout/Footer';
+import { formatMatchDate } from '../utils/formatMatchDate';
+
+const LIMIT = 10;
+const DEBOUNCE_MS = 300;
+const ROW = 'grid grid-cols-[minmax(0,1fr)_48px_minmax(0,1fr)_130px] gap-x-3';
+const PAGE_BTN = 'h-11 min-w-11 cursor-pointer border-0 bg-transparent px-1.5 font-hand text-[26px] font-bold text-pencil disabled:cursor-not-allowed disabled:opacity-40';
+
+const pageWindow = (page, maxPage) => {
+    const start = Math.max(1, Math.min(page - 2, maxPage - 4));
+    const end = Math.min(maxPage, start + 4);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+};
 
 export default function MatchHistory() {
-    const [matches, setMatches] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isFetching, setIsFetching] = useState(false);
+    const { t, i18n } = useTranslation();
+    const lang = i18n.resolvedLanguage;
+    const [query, setQuery] = useState('');
+    const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
-    const [search, setSearch] = useState("");
-    const [totalMatches, setTotalMatches] = useState(0);
-    const navigate = useNavigate();
-
-    const LIMIT = 10;
-    const maxPage = Math.ceil(totalMatches / LIMIT);
+    const [matches, setMatches] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        setIsFetching(true);
         const timer = setTimeout(() => {
-            setLoading(true);
-        }, 400);
-
-        fetch(`/api/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
-            .then(response => response.json())
-            .then(data => {
-                clearTimeout(timer);
-                setMatches(data.items);
-                setTotalMatches(data.total);
-                setLoading(false);
-                setIsFetching(false);
-            })
-            .catch(error => {
-                clearTimeout(timer);
-                console.log(error);
-                setLoading(false);
-                setIsFetching(false);
-            });
-
+            setSearch(query.trim());
+            setPage(1);
+        }, DEBOUNCE_MS);
         return () => clearTimeout(timer);
+    }, [query]);
+
+    useEffect(() => {
+        let alive = true;
+        fetch(`/api/stats/recent-matches?page=${page}&limit=${LIMIT}&search=${encodeURIComponent(search)}`)
+            .then((res) => res.json())
+            .then((data) => {
+                if (!alive) return;
+                setMatches(data.items || []);
+                setTotal(data.total || 0);
+                setLoaded(true);
+            })
+            .catch((err) => console.error(err));
+        return () => { alive = false; };
     }, [page, search]);
-    return (<div className="fixed inset-0 z-50 w-full min-h-[100dvh] text-[#e5e5e5] font-mono p-4 lg:p-8 flex flex-col items-center justify-start overflow-hidden">
-        <div className="w-full flex-1 max-w-4xl lg:max-w-6xl 2xl:max-w-screen-xl 3xl:max-w-screen-2xl w-[95%] md:w-[90%] flex flex-col pt-4 pb-8">
-            <div className="flex justify-between items-end mb-4 md:mb-8 text-right w-full">
-                <button
-                    onClick={() => navigate('/')}
-                    className="text-[#00f2ea] hover:underline flex items-center gap-2 self-start"
-                >
-                    ← BACK TO MENU
-                </button>
-                <h1 className="text-3xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter">
-                    BATTLESHIP_NET
-                </h1>
+
+    const maxPage = Math.max(1, Math.ceil(total / LIMIT));
+
+    return (
+        <PaperLayout active="history">
+            <div className="flex flex-wrap items-end justify-between gap-5">
+                <div className="flex flex-col gap-1">
+                    <span className="-rotate-2 self-start font-hand text-[26px] text-pen">{t('history.kicker')}</span>
+                    <h1 className="m-0 text-[44px] font-extrabold tracking-[-0.02em]">{t('nav.history')}</h1>
+                </div>
+                <div className="flex w-[min(320px,100%)] flex-col gap-0.5">
+                    <label htmlFor="history-search" className="text-[13px] font-bold text-pencil">{t('history.find')}</label>
+                    <input
+                        id="history-search"
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder={t('history.findPh')}
+                        className="h-[46px] w-full border-0 border-b-2 border-ink-dark bg-transparent px-1 font-hand text-[28px] text-ink outline-none placeholder:text-placeholder focus:border-pen"
+                    />
+                </div>
             </div>
 
-            <input
-                type="text"
-                placeholder="SEARCH OPERATIVE..."
-                value={search}
-                onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                }}
-                className="w-full rounded-2xl bg-[#020617] border border-[#a855f7] text-[#00f2ea] p-2 rounded mb-4 focus:outline-none focus:shadow-[0_0_10px_#a855f7] font-mono"
-            />
-
-            {loading ? (
-                <div className="text-[#00f2ea] animate-pulse text-2xl self-center my-auto flex flex-col items-center gap-8">
-                    LOADING DATA...
-                    <div className="pyramid-loader">
-                        <div className="wrapper">
-                            <span className="side side1"></span>
-                            <span className="side side2"></span>
-                            <span className="side side3"></span>
-                            <span className="side side4"></span>
-                            <span className="shadow"></span>
+            <section className="relative -rotate-[0.3deg] bg-white px-7 pt-7 pb-5 note-shadow">
+                <span aria-hidden="true" className="absolute -top-3 left-1/2 h-6 w-24 -ml-12 -rotate-3 bg-[rgba(244,217,120,0.75)]" />
+                <div className="overflow-x-auto">
+                    <div className="min-w-[480px]">
+                        <div className={`${ROW} border-b-2 border-ink-dark pb-2.5 text-[13px] font-extrabold tracking-[0.06em] text-pencil uppercase`}>
+                            <span>{t('history.winner')}</span><span /><span>{t('history.defeated')}</span><span className="text-right">{t('history.played')}</span>
                         </div>
+                        {matches.map((m, idx) => {
+                            const loser = m.winner_nick === m.player1_nick ? m.player2_nick : m.player1_nick;
+                            const date = formatMatchDate(m.played_at, lang);
+                            return (
+                                <div key={idx} title={`${m.winner_nick} ${t('history.sank')} ${loser} · ${date}`} className={`${ROW} items-baseline border-b border-dashed border-dash py-3 text-base`}>
+                                    <strong className="truncate">{m.winner_nick}</strong>
+                                    <span className="font-hand text-[22px] leading-none text-pencil">{t('history.sank')}</span>
+                                    <span className="truncate text-pen-dark line-through">{loser}</span>
+                                    <span className="whitespace-nowrap text-right text-sm text-muted">{date}</span>
+                                </div>
+                            );
+                        })}
+                        {loaded && matches.length === 0 && (
+                            <p className="m-0 py-6 text-center font-hand text-[28px] text-pencil">{t('history.empty')}</p>
+                        )}
                     </div>
                 </div>
-            ) : (
-                <div className="cyber-panel p-[1vh] md:p-[2vh] rounded-2xl flex-1 flex flex-col overflow-hidden border border-[#a855f7] relative">
-                    <h2 className="text-[2vh] md:text-[3vh] font-bold mb-[1vh] text-[#a855f7] cyber-text-glow flex-shrink-0">GLOBAL MATCH RECORDS</h2>
 
-                    <div className="overflow-hidden flex-1 w-full relative">
-                        <table className="w-full h-full text-left border-collapse table-fixed">
-                            <thead className="text-[#00f2ea] border-b border-[#00f2ea33] h-[10%]">
-                                <tr>
-                                    <th className="p-[0.5vh] md:px-[2vh] text-[1.5vh] md:text-[2.2vh] w-1/3">WINNER</th>
-                                    <th className="p-[0.5vh] md:px-[2vh] text-[1.5vh] md:text-[2.2vh] w-1/3">LOSER</th>
-                                    <th className="p-[0.5vh] md:px-[2vh] text-center text-[1.5vh] md:text-[2.2vh] w-1/3">DATE</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {matches.map((item, index) => (
-                                    <tr key={index} className="border-b border-[#00f2ea11] hover:bg-[#ffffff05] transition-colors text-[1.2vh] md:text-[2vh] h-[9%]">
-                                        <td className="p-[0.5vh] md:px-[2vh] text-[#39ff14] font-bold font-mono truncate">{item.winner_nick}</td>
-                                        <td className="p-[0.5vh] md:px-[2vh] text-red-400 font-mono truncate">{item.winner_nick === item.player1_nick ? item.player2_nick : item.player1_nick}</td>
-                                        <td className="p-[0.5vh] md:px-[2vh] text-[#00f2ea] text-right opacity-80 whitespace-nowrap">
-                                            <span className="md:hidden">{new Date(item.played_at + 'Z').toLocaleDateString()}</span>
-                                            <span className="hidden md:inline">{new Date(item.played_at + 'Z').toLocaleString()}</span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="h-[8vh] flex items-center justify-between mt-[1vh] flex-shrink-0 border-t border-[#a855f733] pt-[1vh]">
+                <nav aria-label={t('history.pages')} className="flex items-center justify-center gap-1.5 pt-4">
+                    <button type="button" aria-label={t('history.prev')} disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className={PAGE_BTN}>‹</button>
+                    {pageWindow(page, maxPage).map((n) => (
                         <button
-                            onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                            disabled={page === 1 || isFetching}
-                            className={`bg-[#020617] border border-[#00f2ea] text-[#00f2ea] px-[2vh] py-[0.5vh] rounded font-bold transition-all text-[1.5vh] md:text-[2vh] 
-                            ${(page === 1 || isFetching)
-                                    ? 'opacity-30 cursor-not-allowed border-gray-600 text-gray-600'
-                                    : 'hover:bg-[#00f2ea] hover:text-[#020617]'}`}
+                            key={n}
+                            type="button"
+                            aria-current={n === page ? 'page' : undefined}
+                            onClick={() => setPage(n)}
+                            className={`${PAGE_BTN} ${n === page ? 'circled text-ink' : 'hover:text-ink'}`}
                         >
-                            &lt; PREV
+                            {n}
                         </button>
+                    ))}
+                    <button type="button" aria-label={t('history.next')} disabled={page >= maxPage} onClick={() => setPage((p) => Math.min(maxPage, p + 1))} className={PAGE_BTN}>›</button>
+                </nav>
 
-                        <span className="text-[#a855f7] font-bold text-[1.5vh] uppercase">
-                            PAGE {page} / {maxPage || 1}
-                        </span>
-
-                        <button
-                            onClick={() => setPage(prev => prev + 1)}
-                            disabled={page >= maxPage || isFetching}
-                            className={`bg-[#020617] border border-[#00f2ea] text-[#00f2ea] px-[2vh] py-[0.5vh] rounded font-bold transition-all text-[1.5vh] md:text-[2vh] 
-                                ${(page >= maxPage || isFetching)
-                                    ? 'opacity-30 cursor-not-allowed border-gray-600 text-gray-600'
-                                    : 'hover:bg-[#00f2ea] hover:text-[#020617]'}`}
-                        >
-                            NEXT &gt;
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
-    </div>);
+                <p className="m-0 mt-[18px] flex items-start gap-2.5 text-sm leading-normal text-pencil">
+                    <Info size={18} aria-hidden="true" className="mt-0.5 shrink-0" />
+                    <span>
+                        <Trans i18nKey="history.note" components={{ a: <a href={`${REPO_URL}/issues`} className="text-ink" /> }} />
+                    </span>
+                </p>
+            </section>
+        </PaperLayout>
+    );
 }
