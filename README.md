@@ -1,4 +1,4 @@
-# 🚢 Battleship_NET
+# 🚢 Battleship
 
 Sieciowa gra w statki dla dwóch graczy - klasyczne zasady, interfejs w stylu zeszytu w kratkę i rozgrywka w czasie rzeczywistym przez WebSocket.
 
