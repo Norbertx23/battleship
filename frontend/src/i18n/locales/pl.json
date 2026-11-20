@@ -1,0 +1,186 @@
+{
+  "nav": {
+    "lobby": "Lobby",
+    "history": "Historia meczów",
+    "rules": "Jak grać"
+  },
+  "footer": {
+    "text": "Battleship · open source (MIT) · Ikony: Lucide (ISC), Simple Icons (CC0) · Fonty: Caveat, Nunito (OFL)",
+    "privacy": "Prywatność",
+    "terms": "Regulamin"
+  },
+  "lang": {
+    "group": "Język"
+  },
+  "lobby": {
+    "kicker": "pamiętasz ostatnią ławkę w klasie?",
+    "h1a": "Gra z zeszytu,",
+    "h1b": "teraz ze",
+    "h1c": "znajomym online",
+    "lead": "Narysuj flotę, wyślij kod pokoju i strzelajcie na zmianę. Linijka niepotrzebna.",
+    "create": "Utwórz pokój",
+    "createSub": "Ustaw flotę i dostań kod",
+    "historySub": "Każda bitwa zapisana",
+    "joinTitle": "Masz kod od znajomego?",
+    "joinSub": "Podpisz się, wpisz kod i wskakuj do pokoju.",
+    "yourName": "Twoje imię",
+    "namePh": "np. Kraken",
+    "roomCode": "Kod pokoju",
+    "join": "Dołącz",
+    "fame": "Najlepsi gracze",
+    "wins": "{{count}} wygranych",
+    "recent": "Ostatnie gry",
+    "sank": "zatapia"
+  },
+  "create": {
+    "back": "Wróć do lobby",
+    "newRoom": "Nowy pokój",
+    "lead": "Podpisz się i zakreśl, ile statków każdego rozmiaru dostajecie.",
+    "fleet": "Flota",
+    "shipName": "{{n}}-masztowiec",
+    "countLabel": "{{name}} - liczba",
+    "submit": "Utwórz pokój",
+    "next": "co dalej?",
+    "s1": "Dostajesz kod pokoju. Wyślij go znajomemu.",
+    "s2": "Gdy znajomy dołączy, oboje rozstawiacie statki na planszy.",
+    "s3": "Strzelacie na zmianę. Wygrywa ten, kto pierwszy zatopi całą flotę.",
+    "full": "Przeczytaj pełne zasady"
+  },
+  "room": {
+    "playingAs": "Grasz jako",
+    "ready": "Pokój gotowy",
+    "lead": "Wyślij ten kod osobie, z którą chcesz zagrać.",
+    "roomCode": "Kod pokoju",
+    "waiting": "czekamy na znajomego",
+    "cancel": "Anuluj pokój",
+    "show": "Pokaż kod",
+    "hide": "Ukryj kod",
+    "copy": "Kopiuj kod",
+    "copied": "Skopiowano!"
+  },
+  "game": {
+    "room": "pokój",
+    "leave": "Opuść grę",
+    "myFleet": "Moja flota",
+    "board": "Plansza",
+    "opponentFallback": "przeciwnik"
+  },
+  "deploy": {
+    "title": "Rozstaw statki",
+    "shipyard": "Stocznia",
+    "clear": "Wyczyść planszę",
+    "tip1": "Przeciągnij statek ze stoczni na swoją planszę.",
+    "tip2": "lub prawy przycisk obraca · kliknij postawiony statek, żeby go podnieść",
+    "tip3": "Statki nie mogą się stykać, nawet rogami.",
+    "mast": "{{n}}-masztowiec",
+    "done": "gotowe",
+    "rotV": "Obróć (pionowo)",
+    "rotH": "Obróć (poziomo)",
+    "allPlaced": "wszystkie statki ustawione!",
+    "left": "zostało statków: {{n}}",
+    "ready": "Gotowe - zaczynamy bitwę",
+    "notReady": "Najpierw rozstaw wszystkie statki",
+    "waiting": "Czekamy na przeciwnika…",
+    "remove": "Usuń statek"
+  },
+  "battle": {
+    "theirSea": "Morze przeciwnika",
+    "afloat": "Wciąż na wodzie",
+    "tip": "podpowiedź: prawy przycisk, dotknięcie dwoma palcami albo „zaznaczanie” pozwala zaznaczyć ołówkiem, gdzie mogą być",
+    "hit": "{{cell}} - trafiony! brawo",
+    "miss": "{{cell}} - plusk, pudło",
+    "sunk": "statek przeciwnika zatopiony!",
+    "opponentHit": "auć - trafili Twój statek na {{cell}}",
+    "shipName": "{{n}}-masztowiec",
+    "turn": "Twoja tura - strzelaj!",
+    "enemyTurn": "Tura przeciwnika - czekaj…",
+    "markOn": "Zaznaczanie: wł.",
+    "markOff": "Tryb zaznaczania",
+    "paused": "{{nick}}: brak połączenia - czekamy {{s}} s"
+  },
+  "gameOver": {
+    "back": "Wróć do lobby",
+    "theirFleet": "Flota przeciwnika",
+    "key": "Legenda",
+    "sunk": "Zatopiony",
+    "miss": "Pudło",
+    "never": "Nieodnaleziony",
+    "again": "Zagraj ponownie",
+    "waiting": "Czekamy na: {{nick}}…",
+    "accept": "Przyjmij rewanż",
+    "unavailable": "Przeciwnik wyszedł",
+    "sent": "wysłaliśmy prośbę o rewanż",
+    "wants": "{{nick}} chce rewanżu!",
+    "won": "Wygrana!",
+    "lost": "Przegrana…",
+    "wonSub": "Wszystkie statki gracza {{nick}} leżą na dnie kartki. Świetna robota.",
+    "lostSub": "Tym razem {{nick}} znalazł(a) wszystkie Twoje statki. Zobacz, gdzie chowały się jego."
+  },
+  "history": {
+    "kicker": "dziennik pokładowy",
+    "find": "Znajdź gracza",
+    "findPh": "wpisz nick…",
+    "winner": "Zwycięzca",
+    "defeated": "Pokonany",
+    "played": "Data",
+    "sank": "zatapia",
+    "empty": "brak gier z tym nickiem",
+    "prev": "Poprzednia strona",
+    "next": "Następna strona",
+    "pages": "Strony",
+    "note": "Nicki wpisują sami gracze i nie są moderowane. Jeśli jakiś nick łamie zasady albo zawiera Twoje dane, poproś o jego usunięcie przez <a>GitHub Issues</a>."
+  },
+  "rules": {
+    "kicker": "krótkie zasady, bez zadania domowego",
+    "cta": "Jasne - utwórz pokój",
+    "s1": {
+      "title": "Załóż pokój",
+      "body": "Kliknij <b>Utwórz pokój</b>, podpisz się i wybierz, ile statków każdego rozmiaru dostajecie. Dostaniesz kod. Znajomy wybiera <b>Dołącz</b>, wpisuje swoje imię i ten kod."
+    },
+    "s2": {
+      "title": "Rozstaw statki",
+      "body": "Przeciągnij statek ze stoczni na swoją planszę. <k>R</k> albo prawy przycisk myszy obraca statek (na telefonie: dotknij drugim palcem podczas przeciągania). Postawiony statek możesz przeciągnąć w inne miejsce, a <k>Delete</k> albo przycisk usuwania go zdejmuje. Statki nie mogą się stykać, nawet rogami."
+    },
+    "s3": {
+      "title": "Oddaj strzał",
+      "body": "Tytuł na górze mówi, czyja jest tura. Gdy widzisz <h>Twoja tura</h>, kliknij puste pole na planszy przeciwnika, żeby strzelić. Trafienie daje kolejny strzał, pudło oddaje turę przeciwnikowi."
+    },
+    "s4": {
+      "title": "Zaznaczaj podejrzenia",
+      "body": "<b>Prawy przycisk myszy</b> na polu przeciwnika (na touchpadzie lub ekranie dotykowym: dotknięcie dwoma palcami) albo kliknięcie w <b>trybie zaznaczania</b> koloruje je na żółto. To tylko notatka dla Ciebie, nie strzał. Zrób to jeszcze raz, żeby ją zmazać."
+    },
+    "s5": {
+      "title": "Czytaj planszę",
+      "hit": "Trafiony, część statku",
+      "sunk": "Zatopiony, cały statek poszedł na dno",
+      "miss": "Pudło, sama woda",
+      "mark": "Twoje zaznaczenie"
+    },
+    "s6": {
+      "title": "Wygraj",
+      "body": "Kto pierwszy zatopi wszystkie statki przeciwnika, wygrywa. Po grze możesz obejrzeć obie plansze i kliknąć <b>Zagraj ponownie</b>, żeby zagrać rewanż. Jeśli komuś zerwie się połączenie, gra czeka na niego minutę."
+    }
+  },
+  "legal": {
+    "privacyKicker": "krótko i po ludzku",
+    "termsKicker": "zasady gry fair",
+    "translationNote": "This is an English translation provided for convenience. In case of any discrepancy, the Polish version prevails."
+  },
+  "errors": {
+    "close": "Zamknij komunikat",
+    "nickname_required": "Najpierw się podpisz.",
+    "invalid_nickname": "Ten nick nie przejdzie. Spróbuj innego.",
+    "invalid_fleet_config": "Taka flota jest niedozwolona. Wybierz co najmniej jeden statek.",
+    "room_not_found_or_full": "Ten pokój nie istnieje albo jest już pełny.",
+    "session_expired": "Twoja sesja gry wygasła.",
+    "session_other_device": "Ta gra jest otwarta na innym urządzeniu.",
+    "invalid_ship_placement": "Część statków stoi źle. Sprawdź, czy się nie stykają.",
+    "opponent_left": "Przeciwnik opuścił pokój.",
+    "opponent_forfeit": "{{nick}} opuszcza grę. Wygrywasz!",
+    "player_left": "{{nick}} opuszcza pokój.",
+    "rate_limited": "Zwolnij trochę — za dużo zapytań. Spróbuj ponownie za chwilę."
+  },
+  "consent": {
+    "text": "Grając, akceptujesz <terms>Regulamin</terms> i <privacy>Politykę prywatności</privacy>."
+  }
+}

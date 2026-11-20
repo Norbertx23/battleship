@@ -1,46 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { History, Plus } from 'lucide-react';
 import useLobbySocket from '../hooks/useLobbySocket';
+import { useNotice } from '../notice/useNotice';
+import PaperLayout from './layout/PaperLayout';
+import JoinForm from './lobby/JoinForm';
+import TopPlayers from './lobby/TopPlayers';
+import RecentGames from './lobby/RecentGames';
+import CreateRoom from './create/CreateRoom';
+import RoomCode from './create/RoomCode';
 import GameBoard from './GameBoard';
-import CodeField from './CodeField';
 
-const ShipSelector = ({ masts, count, onChange }) => (
-    <div className="flex flex-col gap-1 mb-2 lg:gap-[calc(0.25rem_-_var(--menu-shrink)*0.01)] lg:mb-[calc(0.5rem_-_var(--menu-shrink)*0.015)]">
-        <div className="flex justify-between items-center text-xs text-[#00f2ea]">
-            <span>{masts}-MAST SHIP</span>
-            <span>COUNT: <span className="text-white font-bold">{count}</span></span>
-        </div>
-        <div className="radio-input self-center">
-            {[0, 1, 2, 3, 4, 5].map(val => (
-                <label key={val} className="lg:py-[calc(0.25rem_-_var(--menu-shrink)*0.01)]!">
-                    <input
-                        type="radio"
-                        name={`ship-${masts}`}
-                        value={val}
-                        checked={count === val}
-                        onChange={() => {
-                            console.log(`Config Update: ${masts}-mast ships set to ${val}`);
-                            onChange(masts, val);
-                        }}
-                    />
-                    <span>{val}</span>
-                </label>
-            ))}
-            <span className="selection"></span>
-        </div>
-    </div>
-);
+const cardBase = 'sketch-border flex flex-[1_1_17rem] flex-col gap-1.5 px-6.5 py-5.5 no-underline transition-transform hover:-translate-y-0.5 hover:-rotate-1';
 
 export default function Lobby() {
-    const navigate = useNavigate();
-
+    const { t } = useTranslation();
+    const { notify } = useNotice();
     const {
         socket,
         view,
         setView,
         nick,
         setNick,
-        guestNick,
         gameCode,
         setGameCode,
         roomCode,
@@ -48,6 +30,7 @@ export default function Lobby() {
         setShipConfig,
         resumeState,
         resumeKey,
+        opponent,
         createRoom,
         joinRoom,
         leaveRoom,
@@ -56,197 +39,111 @@ export default function Lobby() {
     const [topPlayers, setTopPlayers] = useState([]);
     const [recentMatches, setRecentMatches] = useState([]);
 
-    const fetchData = async () => {
-        try {
-            const topRes = await fetch("/api/stats/top-players?limit=3");
-            setTopPlayers(await topRes.json());
-            const recentRes = await fetch("/api/stats/recent-matches?limit=10");
-            const recentData = await recentRes.json();
-            setRecentMatches(recentData.items || []);
-        } catch (err) { console.error(err); }
-    };
-
     useEffect(() => {
-        if (view === 'menu') {
-            fetchData();
-        }
-    }, [view]);
+        if (view !== 'menu') return undefined;
+        let alive = true;
+        (async () => {
+            try {
+                const topRes = await fetch('/api/stats/top-players?limit=3');
+                const recentRes = await fetch('/api/stats/recent-matches?limit=5');
+                if (topRes.status === 429 || recentRes.status === 429) {
+                    notify({ code: 'rate_limited' });
+                    return;
+                }
+                const top = await topRes.json();
+                const recent = await recentRes.json();
+                if (!alive) return;
+                setTopPlayers(Array.isArray(top) ? top : []);
+                setRecentMatches(recent.items || []);
+            } catch (err) {
+                console.error(err);
+            }
+        })();
+        return () => { alive = false; };
+    }, [view, notify]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [view]);
 
-    const handleBack = () => leaveRoom();
-
-    const handleAction = () => {
-        console.log("Handle Action Triggered. View:", view);
-        console.log("Socket connected:", socket.connected, "Socket ID:", socket.id);
-
-        if (!nick) return alert("IDENTITY REQUIRED");
-
-        if (view === 'join') joinRoom();
-        else createRoom();
+    const requireNick = (action) => {
+        if (!nick || !nick.trim()) {
+            notify({ code: 'nickname_required' });
+            return;
+        }
+        action();
     };
 
-    // Menu skaluje sie do wysokosci okna: --menu-shrink mowi, ilu pikseli brakuje do 900px
-    // wysokosci viewportu (maks. 200). Na niskich ekranach (MacBook Air) trzecia karta inaczej
-    // wychodzi poza viewport i chowa sie pod Dockiem; przy wysokosci >= 900px shrink wynosi 0,
-    // wiec rozmiary sa dokladnie takie jak bazowe.
-    const menuShrink = '[--menu-shrink:0px] lg:[--menu-shrink:clamp(0px,900px_-_100vh,200px)]';
+    if (view === 'game') {
+        return (
+            <GameBoard
+                key={resumeKey}
+                socket={socket}
+                roomCode={roomCode || gameCode}
+                shipConfig={shipConfig}
+                onLeave={leaveRoom}
+                nick={nick}
+                opponent={opponent}
+                resumeState={resumeState}
+            />
+        );
+    }
 
-    const formCentering = view === 'create' || view === 'join' || view === 'room_created'
-        ? 'lg:pb-30 xl:pb-[calc(11rem_-_var(--menu-shrink)*0.45)]'
-        : '';
+    if (view === 'create') {
+        return (
+            <CreateRoom
+                nick={nick}
+                onNickChange={setNick}
+                config={shipConfig}
+                onConfigChange={(masts, count) => setShipConfig((prev) => ({ ...prev, [masts]: count }))}
+                onBack={leaveRoom}
+                onCreate={() => requireNick(createRoom)}
+            />
+        );
+    }
 
-    // W widoku gry panel wypelnia cala wysokosc okna (flex-1 zamiast h-full, ktore
-    // przy min-height rodzica rozwija sie tylko do wysokosci tresci) i centruje plansze.
-    const paneClasses = view === 'game'
-        ? 'flex-1 justify-center pt-2 pb-2'
-        : `justify-start pt-4 md:pt-8 lg:pt-8 xl:pt-[calc(4rem_-_var(--menu-shrink)*0.22)] pb-8 ${formCentering} ${view === 'match_history' ? 'h-full' : 'lg:h-full lg:overflow-y-auto'}`;
+    if (view === 'room_created') {
+        return <RoomCode nick={nick} code={roomCode} onCancel={leaveRoom} />;
+    }
 
     return (
-        <div
-            className={`min-h-screen w-full bg-linear-to-b from-[#020617] to-[#020617] text-[#e5e5e5] font-mono flex flex-col-reverse p-4 lg:p-8 gap-8 lg:gap-12 overflow-x-hidden ${menuShrink} ${view === 'match_history' || view === 'game' ? 'flex-col lg:flex-row lg:justify-center' : 'lg:grid lg:grid-cols-2'}`}
-        >
-
-            {}
-            {view !== 'match_history' && view !== 'game' && (
-                <div className="flex flex-col justify-center gap-4 lg:gap-8 border-t lg:border-t-0 lg:border-r border-blue-500/30 pt-8 lg:pt-0 lg:pr-6 xl:pr-12 lg:min-h-0 lg:h-full overflow-hidden">
-                    {}
-                    <div className="cyber-panel p-4 lg:p-6 rounded relative overflow-hidden flex-shrink-0 lg:max-h-[40%] flex flex-col">
-                        <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#00f2ea] cyber-text-glow flex-shrink-0">
-                            TOP_OPERATIVES
-                        </h2>
-                        <ul className="space-y-2 lg:space-y-3 lg:overflow-y-auto pr-2 custom-scrollbar">
-                            {topPlayers.map((p, idx) => (
-                                <li key={idx} className="flex justify-between items-center border-b border-[#00f2ea33] pb-2 text-sm lg:text-base">
-                                    <span className={`font-bold ${idx === 0 ? 'text-[#a855f7]' : 'text-white'}`}>#{idx + 1} {p.nick}</span>
-                                    <span className="font-mono text-[#00f2ea]">{p.wins} WINS</span>
-                                </li>
-                            ))}
-                        </ul>
+        <PaperLayout active="lobby">
+            <main className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <section className="flex min-w-0 flex-col gap-8">
+                    <div className="flex flex-col gap-3">
+                        <span className="-rotate-2 self-start font-hand text-2xl text-pen">{t('lobby.kicker')}</span>
+                        <h1 className="m-0 text-4xl md:text-6xl leading-[1.05] font-extrabold tracking-[-0.02em]">
+                            {t('lobby.h1a')}<br />{t('lobby.h1b')}{' '}
+                            <span className="bg-highlight px-1.5 [box-decoration-break:clone]">{t('lobby.h1c')}</span>.
+                        </h1>
+                        <p className="m-0 max-w-125 text-lg leading-relaxed text-[#4A4843]">{t('lobby.lead')}</p>
                     </div>
 
-                    {}
-                    <div className="cyber-panel p-4 lg:p-6 rounded relative h-auto lg:h-[45%] flex flex-col lg:overflow-hidden min-h-[300px] lg:min-h-0">
-                        <h2 className="text-lg lg:text-xl font-bold mb-4 text-[#a855f7] cyber-text-glow flex-shrink-0">
-                            RECENT_MATCHES
-                        </h2>
-                        <div className="lg:overflow-y-auto flex-1 pr-2 custom-scrollbar text-xs lg:text-sm">
-                            <table className="w-full text-left">
-                                <thead className="text-[#00f2ea] border-b border-[#00f2ea33] sticky top-0 bg-[#000000dd] backdrop-blur-sm z-10">
-                                    <tr>
-                                        <th className="p-2">VICTOR</th>
-                                        <th className="p-2">DEFEATED</th>
-                                        <th className="p-2 text-right">DATE</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {recentMatches.map((m, idx) => (
-                                        <tr key={idx} className="border-b border-[#00f2ea33]">
-                                            <td className="p-2 text-[#39ff14] font-bold drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">{m.winner_nick}</td>
-                                            <td className="p-2 text-red-400">{m.winner_nick === m.player1_nick ? m.player2_nick : m.player1_nick}</td>
-                                            <td className="p-2 text-right text-[#00f2ea]">
-                                                <span className="md:hidden">{new Date(m.played_at + 'Z').toLocaleDateString()}</span>
-                                                <span className="hidden md:inline">{new Date(m.played_at + 'Z').toLocaleString()}</span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {}
-            <div className={`flex flex-col items-center relative w-full ${paneClasses}`}>
-                {view !== 'game' && (
-                    <h1 className="text-3xl md:text-5xl xl:text-[calc(4.5rem_-_var(--menu-shrink)*0.14)] font-black mb-6 lg:mb-10 xl:mb-[calc(2.5rem_-_var(--menu-shrink)*0.09)] text-transparent bg-clip-text bg-gradient-to-r from-[#00f2ea] to-[#a855f7] cyber-text-glow tracking-tighter text-center px-2">
-                        BATTLESHIP_NET
-                    </h1>
-                )}
-
-                {view === 'menu' && (
-                    <div className="cards w-full max-w-xs lg:max-w-md flex flex-col gap-[15px] lg:gap-[calc(15px_-_var(--menu-shrink)*0.02)] items-center my-auto">
-                        <div className="card red h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => setView('create')}>
-                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">CREATE ROOM</p>
-                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">Start a new battle</p>
-                        </div>
-                        <div className="card blue h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => { setView('join'); setGameCode(''); }}>
-                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">JOIN ROOM</p>
-                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">Enter existing code</p>
-                        </div>
-                        <div className="card green h-40 lg:h-[calc(160px_-_var(--menu-shrink)*0.22)]" onClick={() => navigate('/match_history')}>
-                            <p className="tip text-[1.8em] lg:text-[calc(1.8rem_-_var(--menu-shrink)*0.035)]">MATCH HISTORY</p>
-                            <p className="second-text text-[1em] lg:text-[calc(1rem_-_var(--menu-shrink)*0.015)]">See full records</p>
-                        </div>
-                    </div>
-                )}
-
-                {(view === 'create' || view === 'join') && (
-                    <div className="w-full max-w-xs lg:max-w-md flex flex-col justify-center my-auto">
-                        <button onClick={handleBack} className="mb-4 lg:mb-[calc(1rem_-_var(--menu-shrink)*0.01)] text-[#00f2ea] hover:underline flex items-center gap-2">
-                            &larr; ABORT SEQUENCE
+                    <div className="flex flex-wrap gap-5">
+                        <button type="button" onClick={() => setView('create')} className={`${cardBase} cursor-pointer border-ink bg-ink text-left text-white`}>
+                            <span className="flex items-center gap-2.5 text-2xl font-extrabold"><Plus size={24} aria-hidden="true" />{t('lobby.create')}</span>
+                            <span className="text-base text-[#DCE3F7]">{t('lobby.createSub')}</span>
                         </button>
-
-                        <div className="form-container lg:py-[calc(2rem_-_var(--menu-shrink)*0.06)]!">
-                            <form className="form lg:gap-[calc(0.875rem_-_var(--menu-shrink)*0.02)]!" onSubmit={(e) => e.preventDefault()}>
-                                <div className="form-group">
-                                    <label htmlFor="nick">CODENAME</label>
-                                    <input type="text" id="nick" name="nick" required maxLength={30} value={nick} onChange={(e) => setNick(e.target.value)} onBlur={() => !nick.trim() && setNick(guestNick)} placeholder="Enter your identity" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
-                                </div>
-
-                                {view === 'create' && (
-                                    <>
-                                        <div className="border-t border-[#414141] mt-2 pt-2 lg:mt-[calc(0.5rem_-_var(--menu-shrink)*0.01)] lg:pt-[calc(0.5rem_-_var(--menu-shrink)*0.01)]">
-                                            <p className="text-[#00f2ea] text-xs font-bold mb-3 lg:mb-[calc(0.75rem_-_var(--menu-shrink)*0.02)] tracking-widest text-center">FLEET CONFIGURATION</p>
-                                            <ShipSelector masts="4" count={shipConfig["4"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
-                                            <ShipSelector masts="3" count={shipConfig["3"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
-                                            <ShipSelector masts="2" count={shipConfig["2"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
-                                            <ShipSelector masts="1" count={shipConfig["1"]} onChange={(m, v) => setShipConfig({ ...shipConfig, [m]: v })} />
-                                        </div>
-                                    </>
-                                )}
-
-                                {view === 'join' && (
-                                    <div className="form-group">
-                                        <label htmlFor="room">SECURE ROOM ID</label>
-                                        <input type="text" id="room" name="room" required value={gameCode} onChange={(e) => setGameCode(e.target.value)} placeholder="Enter access code" className="lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" />
-                                    </div>
-                                )}
-
-                                <button className="form-submit-btn lg:py-[calc(0.75rem_-_var(--menu-shrink)*0.015)]!" type="submit" onClick={handleAction}>
-                                    {view === 'create' ? "INITIALIZE MISSION" : "ESTABLISH CONNECTION"}
-                                </button>
-                            </form>
-                        </div>
+                        <Link to="/match_history" className={`${cardBase} border-ink-dark bg-white text-ink-dark`}>
+                            <span className="flex items-center gap-2.5 text-2xl font-extrabold"><History size={24} aria-hidden="true" />{t('nav.history')}</span>
+                            <span className="text-base text-pencil">{t('lobby.historySub')}</span>
+                        </Link>
                     </div>
-                )}
 
-                {view === 'room_created' && (
-                    <div className="my-auto p-6 lg:p-[calc(1.5rem_-_var(--menu-shrink)*0.02)] border-2 border-[#00f2ea] bg-[#00f2ea11] rounded text-center w-full max-w-sm cyber-panel">
-                        <p className="text-[#00f2ea] text-sm tracking-widest mb-4">SERVER_INITIALIZED</p>
-                        <div className="flex justify-center">
-                            <CodeField code={roomCode} revealable textClassName="text-3xl md:text-4xl" />
-                        </div>
-                        <p className="text-gray-500 text-xs mt-4 animate-pulse">WAITING_FOR_PEER_CONNECTION...</p>
-                        <button onClick={handleBack} className="mt-6 text-xs text-gray-500 hover:text-white">CANCEL</button>
-                    </div>
-                )}
-
-                {view === 'game' && (
-                    <GameBoard
-                        key={resumeKey}
-                        socket={socket}
-                        roomCode={roomCode || gameCode}
-                        shipConfig={shipConfig}
-                        onLeave={handleBack}
+                    <JoinForm
                         nick={nick}
-                        resumeState={resumeState}
+                        onNickChange={setNick}
+                        code={gameCode}
+                        onCodeChange={setGameCode}
+                        onJoin={joinRoom}
                     />
-                )}
-            </div>
-        </div>
+                </section>
+
+                <aside className="grid min-w-0 gap-8 md:grid-cols-2 lg:grid-cols-1">
+                    <TopPlayers players={topPlayers} />
+                    <RecentGames matches={recentMatches} />
+                </aside>
+            </main>
+        </PaperLayout>
     );
 }

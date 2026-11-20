@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSocket from './useSocket';
 import { useLocalStorage } from './useLocalStorage';
+import { useNotice } from '../notice/useNotice';
+import { pickOpponent } from '../utils/pickOpponent';
 
 export default function useLobbySocket() {
     const socket = useSocket();
+    const { notify } = useNotice();
 
     const [view, setView] = useState('menu');
     const [guestNick] = useState(() => 'Player_' + Math.floor(Math.random() * 1000));
@@ -13,6 +16,7 @@ export default function useLobbySocket() {
     const [shipConfig, setShipConfig] = useState({ '4': 1, '3': 2, '2': 2, '1': 4 });
     const [resumeState, setResumeState] = useState(null);
     const [resumeKey, setResumeKey] = useState(0);
+    const [opponent, setOpponent] = useState('');
 
     const viewRef = useRef(view);
     const activeRoomRef = useRef('');
@@ -45,6 +49,7 @@ export default function useLobbySocket() {
             console.log('GAME STARTED! Config:', data.config);
             setResumeState(null);
             setShipConfig(data.config);
+            setOpponent(pickOpponent(data.players, nickRef.current));
             setResumeKey(prev => prev + 1);
             setView('game');
         };
@@ -54,6 +59,7 @@ export default function useLobbySocket() {
             setRoomCode(data.room_id);
             setGameCode(data.room_id);
             if (data.nick) setNick(data.nick);
+            setOpponent(pickOpponent(data.players, data.nick || nickRef.current));
             if (data.phase === 'lobby') {
                 setResumeState(null);
                 setView('room_created');
@@ -74,16 +80,16 @@ export default function useLobbySocket() {
         const handleRejoinFailed = (data) => {
             const activeRoom = activeRoomRef.current;
             if (activeRoom) sessionStorage.removeItem('bs_token_' + activeRoom);
-            alert('SIGNAL LOST: ' + data.message + '\nReturning to Lobby.');
+            notify(data);
             setResumeState(null);
             setRoomCode('');
             setGameCode('');
             setView('menu');
         };
-        const handleError = (data) => alert(data.message);
+        const handleError = (data) => notify(data);
         const handlePlayerDisconnected = (data) => {
             if (viewRef.current !== 'menu' && !data.silent) {
-                alert('SIGNAL LOST: ' + data.message + '\nReturning to Lobby.');
+                notify(data);
                 setView('menu');
                 setRoomCode('');
             }
@@ -108,7 +114,7 @@ export default function useLobbySocket() {
             socket.off('error', handleError);
             socket.off('player_disconnected', handlePlayerDisconnected);
         };
-    }, [socket, setNick]);
+    }, [socket, setNick, notify]);
 
     const createRoom = useCallback(() => {
         console.log('Creating room with ship config:', shipConfig);
@@ -148,6 +154,7 @@ export default function useLobbySocket() {
         setShipConfig,
         resumeState,
         resumeKey,
+        opponent,
         createRoom,
         joinRoom,
         leaveRoom,

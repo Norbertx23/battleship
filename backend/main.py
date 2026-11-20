@@ -1,3 +1,4 @@
+import os
 import random
 import asyncio
 
@@ -11,9 +12,24 @@ import socketio
 import uuid
 from sqlalchemy import or_
 import game_manager as gm
+from rate_limit import RateLimiter, client_ip
 
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
-fastapi_app = FastAPI()
+DEFAULT_ORIGINS = ['https://battleship.swistak.fun', 'http://localhost:3000', 'http://localhost:5173']
+MAX_MESSAGE_BYTES = 64 * 1024
+
+
+def parse_origins(raw):
+    if not raw:
+        return DEFAULT_ORIGINS
+    return [o.strip() for o in raw.split(',') if o.strip()]
+
+
+sio = socketio.AsyncServer(
+    async_mode='asgi',
+    cors_allowed_origins=parse_origins(os.getenv('ALLOWED_ORIGINS')),
+    max_http_buffer_size=MAX_MESSAGE_BYTES,
+)
+fastapi_app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 app = socketio.ASGIApp(sio, fastapi_app)
 
@@ -22,6 +38,35 @@ rooms = {}
 GRACE_PERIOD = 60
 LOBBY_GRACE_PERIOD = 180
 MAX_NICK_LENGTH = 30
+
+STATS_LIMIT = 60
+ROOM_LIMIT = 10
+LIMIT_WINDOW = 60
+RATE_LIMITED_MESSAGE = 'Too many requests. Try again in a moment.'
+
+stats_limiter = RateLimiter(STATS_LIMIT, LIMIT_WINDOW)
+room_limiter = RateLimiter(ROOM_LIMIT, LIMIT_WINDOW)
+sid_ips = {}
+
+
+@fastapi_app.middleware('http')
+async def limit_stats(request, call_next):
+    if request.url.path.startswith('/stats'):
+        ip = client_ip(request.headers, request.client.host if request.client else 'unknown')
+        if not stats_limiter.hit(ip):
+            return JSONResponse(
+                status_code=429,
+                content={'code': 'rate_limited', 'message': RATE_LIMITED_MESSAGE},
+                headers={'Retry-After': str(stats_limiter.retry_after(ip))},
+            )
+    return await call_next(request)
+
+
+async def room_rate_ok(sid):
+    if room_limiter.hit(sid_ips.get(sid, sid)):
+        return True
+    await sio.emit('error', {'code': 'rate_limited', 'message': RATE_LIMITED_MESSAGE}, to=sid)
+    return False
 
 
 def clean_nick(nick):
@@ -34,6 +79,11 @@ def clean_nick(nick):
 
 @sio.event
 async def connect(sid, environ):
+    headers = {
+        'cf-connecting-ip': environ.get('HTTP_CF_CONNECTING_IP'),
+        'x-forwarded-for': environ.get('HTTP_X_FORWARDED_FOR'),
+    }
+    sid_ips[sid] = client_ip(headers, environ.get('REMOTE_ADDR', sid))
     print("connect ", sid)
 
 def cancel_pending(room_data):
@@ -98,9 +148,9 @@ def resume_phase(room_data, sid):
     return 'waiting' if sid in room_data.get('ready', []) else 'placement'
 
 
-async def fail_join(sid, message, is_rejoin):
+async def fail_join(sid, code, message, is_rejoin):
     event = 'rejoin_failed' if is_rejoin else 'error'
-    await sio.emit(event, {'message': message}, to=sid)
+    await sio.emit(event, {'code': code, 'message': message}, to=sid)
 
 
 async def handle_leave(sid, room_id):
@@ -135,9 +185,9 @@ async def handle_leave(sid, room_id):
                     room_data['status'] = 'finished'
                     save_match_to_db(remaining_nick, leaving_nick, remaining_nick)
                     await sio.emit('game_over', {'winner': remaining_sid, 'enemy_ships': leaving_ships}, room=room_id)
-                    await sio.emit('player_disconnected', {'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
+                    await sio.emit('player_disconnected', {'code': 'opponent_forfeit', 'nick': leaving_nick, 'message': f'Opponent {leaving_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
                 else:
-                    await sio.emit('player_disconnected', {'message': f'Player {leaving_nick} left the room.'}, room=room_id)
+                    await sio.emit('player_disconnected', {'code': 'player_left', 'nick': leaving_nick, 'message': f'Player {leaving_nick} left the room.'}, room=room_id)
 
 
 async def do_forfeit(room_id, leaver_sid, leaver_nick):
@@ -166,7 +216,7 @@ async def do_forfeit(room_id, leaver_sid, leaver_nick):
     room_data['status'] = 'finished'
     save_match_to_db(remaining_nick, leaver_nick, remaining_nick)
     await sio.emit('game_over', {'winner': remaining_sid, 'enemy_ships': room_data['boards'].get(leaver_sid, [])}, room=room_id)
-    await sio.emit('player_disconnected', {'message': f'Opponent {leaver_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
+    await sio.emit('player_disconnected', {'code': 'opponent_forfeit', 'nick': leaver_nick, 'message': f'Opponent {leaver_nick} abandoned the mission. You WIN!', 'forfeit': True}, room=room_id)
 
 
 async def do_lobby_leave(room_id, leaver_sid, leaver_nick):
@@ -183,7 +233,7 @@ async def do_lobby_leave(room_id, leaver_sid, leaver_nick):
         print(f"Room {room_id} deleted (nobody left in lobby)")
         return
 
-    await sio.emit('player_disconnected', {'message': f'Player {leaver_nick} left the room.'}, room=room_id)
+    await sio.emit('player_disconnected', {'code': 'player_left', 'nick': leaver_nick, 'message': f'Player {leaver_nick} left the room.'}, room=room_id)
 
 
 async def grace_timeout(room_id, leaver_sid, leaver_nick, period):
@@ -259,11 +309,12 @@ async def do_rejoin(new_sid, room_id, old_sid):
 
 @sio.event
 async def play_again(sid, data):
+    data = data if isinstance(data, dict) else {}
     room = rooms.get(data.get('room_id'))
     if not room or room.get('status') != 'finished' or sid not in room['players']:
         return
     if len(room['players']) < 2:
-        await sio.emit('error', {'message': 'Opponent left the room.'}, to=sid)
+        await sio.emit('error', {'code': 'opponent_left', 'message': 'Opponent left the room.'}, to=sid)
         return
 
     votes = room.setdefault('play_again', set())
@@ -282,12 +333,14 @@ async def play_again(sid, data):
 
 @sio.event
 async def leave_room(sid, data):
+    data = data if isinstance(data, dict) else {}
     room_id = data.get('room_id')
     await handle_leave(sid, room_id)
 
 @sio.event
 async def disconnect(sid):
     print("disconnect ", sid)
+    sid_ips.pop(sid, None)
     for room_id, room_data in list(rooms.items()):
         if sid not in room_data['players']:
             continue
@@ -306,12 +359,15 @@ async def disconnect(sid):
 
 @sio.event
 async def create_room(sid, data):
+    data = data if isinstance(data, dict) else {}
+    if not await room_rate_ok(sid):
+        return
     nick = clean_nick(data.get('nick'))
     if not nick:
-        await sio.emit('error', {'message': 'Invalid nickname.'}, to=sid)
+        await sio.emit('error', {'code': 'invalid_nickname', 'message': 'Invalid nickname.'}, to=sid)
         return
     if not gm.validate_config(data.get('config')):
-        await sio.emit('error', {'message': 'Invalid fleet configuration.'}, to=sid)
+        await sio.emit('error', {'code': 'invalid_fleet_config', 'message': 'Invalid fleet configuration.'}, to=sid)
         return
 
     room_id = str(uuid.uuid4())[:6].upper()
@@ -335,12 +391,15 @@ async def create_room(sid, data):
 
 @sio.event
 async def join_room(sid, data):
-    room_id = data['room_id']
+    data = data if isinstance(data, dict) else {}
+    if not await room_rate_ok(sid):
+        return
+    room_id = data.get('room_id')
     is_rejoin = bool(data.get('rejoin'))
     provided = data.get('token')
 
-    if room_id not in rooms:
-        await fail_join(sid, 'Room does not exist or is full', is_rejoin)
+    if not isinstance(room_id, str) or room_id not in rooms:
+        await fail_join(sid, 'room_not_found_or_full', 'Room does not exist or is full', is_rejoin)
         return
 
     room = rooms[room_id]
@@ -351,17 +410,17 @@ async def join_room(sid, data):
         return
 
     if is_rejoin:
-        await fail_join(sid, 'Cannot reconnect: session expired.', True)
+        await fail_join(sid, 'session_expired', 'Cannot reconnect: session expired.', True)
         return
 
     if room.get('pending') and room.get('status') == 'playing':
-        await sio.emit('error', {'message': 'Cannot reconnect: this session belongs to another device.'}, to=sid)
+        await sio.emit('error', {'code': 'session_other_device', 'message': 'Cannot reconnect: this session belongs to another device.'}, to=sid)
         return
 
     if room.get('status', 'waiting') == 'waiting' and len(room['players']) < 2:
         nick = clean_nick(data.get('nick'))
         if not nick:
-            await sio.emit('error', {'message': 'Invalid nickname.'}, to=sid)
+            await sio.emit('error', {'code': 'invalid_nickname', 'message': 'Invalid nickname.'}, to=sid)
             return
         token = uuid.uuid4().hex
         room['players'][sid] = nick
@@ -376,7 +435,7 @@ async def join_room(sid, data):
         print(f"{sid} dołączył do {room_id}")
 
     else:
-        await sio.emit('error', {'message' : 'Room does not exist or is full'}, to=sid)
+        await sio.emit('error', {'code': 'room_not_found_or_full', 'message': 'Room does not exist or is full'}, to=sid)
 def get_db():
     db = SessionLocal()
     try:
@@ -387,6 +446,7 @@ def get_db():
 
 @sio.event
 async def place_ships(sid, data):
+    data = data if isinstance(data, dict) else {}
     room_id = data.get('room_id')
     ships = data.get('ships')
     room = rooms.get(room_id)
@@ -394,7 +454,7 @@ async def place_ships(sid, data):
     if room and sid in room['players'] and room.get('status') == 'waiting' and len(room['players']) == 2:
         if not gm.validate_fleet(ships, room['config']):
             print(f"Validation failed for {sid} with ships: {ships}")
-            await sio.emit('error', {'message': 'Invalid ship placement!'}, to=sid)
+            await sio.emit('error', {'code': 'invalid_ship_placement', 'message': 'Invalid ship placement!'}, to=sid)
             return
 
         room['boards'][sid] = ships
@@ -427,6 +487,7 @@ def save_match_to_db(winner_nick, player1_nick, player2_nick):
 
 @sio.event
 async def fire_shot(sid, data):
+    data = data if isinstance(data, dict) else {}
     print(f"SHOT FIRED by {sid}: {data}")
 
     room_id = data.get('room_id')

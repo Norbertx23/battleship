@@ -1,0 +1,186 @@
+{
+  "nav": {
+    "lobby": "Lobby",
+    "history": "Match history",
+    "rules": "How to play"
+  },
+  "footer": {
+    "text": "Battleship · open source (MIT) · Icons: Lucide (ISC), Simple Icons (CC0) · Fonts: Caveat, Nunito (OFL)",
+    "privacy": "Privacy",
+    "terms": "Terms"
+  },
+  "lang": {
+    "group": "Language"
+  },
+  "lobby": {
+    "kicker": "remember the back row of the classroom?",
+    "h1a": "The paper game,",
+    "h1b": "now with a",
+    "h1c": "friend online",
+    "lead": "Draw your fleet, send the room code, take turns calling shots. No ruler needed.",
+    "create": "Create room",
+    "createSub": "Set up your fleet, get a code",
+    "historySub": "Every battle, written down",
+    "joinTitle": "Got a code from a friend?",
+    "joinSub": "Sign your name, write the code and jump into their room.",
+    "yourName": "Your name",
+    "namePh": "e.g. Kraken",
+    "roomCode": "Room code",
+    "join": "Join",
+    "fame": "Hall of fame",
+    "wins": "{{count}} wins",
+    "recent": "Recent games",
+    "sank": "sank"
+  },
+  "create": {
+    "back": "Back to lobby",
+    "newRoom": "New room",
+    "lead": "Sign your name and circle how many ships of each size you both get.",
+    "fleet": "Fleet",
+    "shipName": "{{n}}-mast ship",
+    "countLabel": "{{name}} count",
+    "submit": "Create room",
+    "next": "what happens next?",
+    "s1": "You get a room code. Send it to a friend.",
+    "s2": "When they join, you both place your ships on the grid.",
+    "s3": "Take turns shooting. First to sink the whole fleet wins.",
+    "full": "Read the full rules"
+  },
+  "room": {
+    "playingAs": "Playing as",
+    "ready": "Your room is ready",
+    "lead": "Send this code to the person you want to play with.",
+    "roomCode": "Room code",
+    "waiting": "waiting for your friend",
+    "cancel": "Cancel room",
+    "show": "Show code",
+    "hide": "Hide code",
+    "copy": "Copy code",
+    "copied": "Copied!"
+  },
+  "game": {
+    "room": "room",
+    "leave": "Leave game",
+    "myFleet": "My fleet",
+    "board": "Board",
+    "opponentFallback": "your opponent"
+  },
+  "deploy": {
+    "title": "Place your ships",
+    "shipyard": "Shipyard",
+    "clear": "Clear board",
+    "tip1": "Drag a ship from the shipyard onto your grid.",
+    "tip2": "or right‑click rotates · click a placed ship to pick it up",
+    "tip3": "Ships can't touch, not even at the corners.",
+    "mast": "{{n}}-mast",
+    "done": "done",
+    "rotV": "Rotate (vertical)",
+    "rotH": "Rotate (horizontal)",
+    "allPlaced": "all ships placed!",
+    "left": "{{n}} ships left",
+    "ready": "I'm ready - start battle",
+    "notReady": "Place every ship to continue",
+    "waiting": "Waiting for your opponent…",
+    "remove": "Remove ship"
+  },
+  "battle": {
+    "theirSea": "Their sea",
+    "afloat": "Still afloat",
+    "tip": "tip: right‑click, tap with two fingers or turn on “mark” to pencil in where you think they are",
+    "hit": "{{cell}} - hit! nice one",
+    "miss": "{{cell}} - splash, missed",
+    "sunk": "enemy ship sunk!",
+    "opponentHit": "ouch - they hit your ship at {{cell}}",
+    "shipName": "{{n}}-mast ship",
+    "turn": "Your turn - take a shot!",
+    "enemyTurn": "Their turn - hold on…",
+    "markOn": "Marking: on",
+    "markOff": "Mark mode",
+    "paused": "{{nick}} lost connection - waiting {{s}} s"
+  },
+  "gameOver": {
+    "back": "Back to lobby",
+    "theirFleet": "Their fleet, revealed",
+    "key": "Key",
+    "sunk": "Sunk",
+    "miss": "Miss",
+    "never": "Never found",
+    "again": "Play again",
+    "waiting": "Waiting for {{nick}}…",
+    "accept": "Accept rematch",
+    "unavailable": "Opponent left",
+    "sent": "we sent them your rematch request",
+    "wants": "{{nick}} wants a rematch!",
+    "won": "You won!",
+    "lost": "You lost…",
+    "wonSub": "Every one of {{nick}}’s ships is at the bottom of the page. Nicely done.",
+    "lostSub": "{{nick}} found all of your ships this time. Have a look where theirs were hiding."
+  },
+  "history": {
+    "kicker": "the logbook",
+    "find": "Find a player",
+    "findPh": "type a name…",
+    "winner": "Winner",
+    "defeated": "Defeated",
+    "played": "Played",
+    "sank": "sank",
+    "empty": "no games with that name yet",
+    "prev": "Previous page",
+    "next": "Next page",
+    "pages": "Pages",
+    "note": "Player names are typed in by players and aren't moderated. If a name breaks the rules or contains your personal data, ask for it to be removed via <a>GitHub Issues</a>."
+  },
+  "rules": {
+    "kicker": "quick rules, no homework",
+    "cta": "Got it - create a room",
+    "s1": {
+      "title": "Start a room",
+      "body": "Click <b>Create room</b>, sign your name and choose how many ships of each size you both get. You'll get a code. Your friend picks <b>Join</b>, enters their name and that code."
+    },
+    "s2": {
+      "title": "Place your ships",
+      "body": "Drag a ship from the shipyard onto your grid. Press <k>R</k> or right‑click to rotate (on a phone: touch with a second finger while dragging). Drag a placed ship to move it, <k>Delete</k> or the remove button takes it off. Ships can't touch each other, not even at the corners."
+    },
+    "s3": {
+      "title": "Take your shot",
+      "body": "The title at the top says whose turn it is. When it reads <h>Your turn</h>, click any empty square on your opponent's grid to fire. A hit lets you shoot again, a miss passes the turn."
+    },
+    "s4": {
+      "title": "Mark your guesses",
+      "body": "<b>Right‑click</b> a square on the opponent's grid (on a touchpad or touchscreen: tap it with two fingers), or turn on <b>Mark mode</b> and click it, to colour it yellow. It's just a note for you, not a shot. Do it again to rub it out."
+    },
+    "s5": {
+      "title": "Read the grid",
+      "hit": "Hit, part of a ship",
+      "sunk": "Sunk, the whole ship is down",
+      "miss": "Miss, just water",
+      "mark": "Your own marker"
+    },
+    "s6": {
+      "title": "Win the game",
+      "body": "Sink every enemy ship first and you win. After the game you can look over both boards and hit <b>Play again</b> for a rematch. If someone's connection drops, the game waits a minute for them to come back."
+    }
+  },
+  "legal": {
+    "privacyKicker": "short and human",
+    "termsKicker": "play fair",
+    "translationNote": "This is an English translation provided for convenience. In case of any discrepancy, the Polish version prevails."
+  },
+  "errors": {
+    "close": "Close message",
+    "nickname_required": "Sign your name first.",
+    "invalid_nickname": "That name doesn't work. Try a different one.",
+    "invalid_fleet_config": "That fleet setup isn't allowed. Pick at least one ship.",
+    "room_not_found_or_full": "That room doesn't exist or is already full.",
+    "session_expired": "Your game session has expired.",
+    "session_other_device": "This game is open on another device.",
+    "invalid_ship_placement": "Some ships are placed wrong. Check that they don't touch.",
+    "opponent_left": "Your opponent has left the room.",
+    "opponent_forfeit": "{{nick}} left the game. You win!",
+    "player_left": "{{nick}} left the room.",
+    "rate_limited": "Slow down a little — too many requests. Try again in a moment."
+  },
+  "consent": {
+    "text": "By playing, you accept the <terms>Terms of Use</terms> and the <privacy>Privacy Policy</privacy>."
+  }
+}

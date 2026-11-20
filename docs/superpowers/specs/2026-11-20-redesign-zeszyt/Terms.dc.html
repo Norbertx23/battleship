@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Battleship – Regulamin</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FBF8F1}
+a{color:#1F3A93}a:hover{color:#142766}
+.paper{background-color:#FBF8F1;background-image:linear-gradient(rgba(31,58,147,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(31,58,147,0.08) 1px,transparent 1px);background-size:28px 28px}
+.hand{font-family:'Caveat',cursive}
+.note{background:#FFFFFF;box-shadow:0 1px 0 rgba(0,0,0,0.04),0 10px 24px -14px rgba(60,40,10,0.35)}
+.tape{position:absolute;top:-12px;left:50%;width:96px;height:24px;margin-left:-48px;background:rgba(244,217,120,0.75);transform:rotate(-3deg)}
+.doc h2{margin:28px 0 8px;font-size:20px;font-weight:800}
+.doc p,.doc li{font-size:16px;line-height:1.65;color:#3A3934}
+.doc p{margin:0 0 10px}
+.doc ol{margin:0 0 10px;padding-left:22px}
+.ph{background:#FFE873;padding:0 4px;font-weight:700}
+.lng{min-height:34px;min-width:44px;padding:0 12px;border:0;font:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="paper" style="min-height: 100vh; color: #1F2A44; font-family: 'Nunito', system-ui, sans-serif; position: relative; display: flex; flex-direction: column;">
+  <div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: 72px; width: 2px; background: rgba(211,63,47,0.35);"></div>
+  <div style="flex: 1 0 auto; width: 100%; max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px 104px; box-sizing: border-box; display: flex; flex-direction: column; gap: 32px;">
+    <header style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
+      <a href="Main.dc.html" class="hand" style="font-size: 40px; font-weight: 700; color: #1F3A93; text-decoration: none; line-height: 1;">Battleship</a>
+      <div style="display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center;">
+        <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 24px; font-weight: 700; font-size: 15px;">
+          <a href="Main.dc.html" style="color: #5C5A55; text-decoration: none;">{{t.navLobby}}</a>
+          <a href="History.dc.html" style="color: #5C5A55; text-decoration: none;">{{t.navHistory}}</a>
+          <a href="Rules.dc.html" style="color: #5C5A55; text-decoration: none;">{{t.navRules}}</a>
+        </nav>
+        <div role="group" aria-label="Language" style="display: inline-flex; border: 2px solid #1F2A44; border-radius: 999px; overflow: hidden; font-size: 13px; font-weight: 800;">
+          <button type="button" class="lng" onClick="{{setEn}}" aria-pressed="{{enPressed}}" style="background: {{enBg}}; color: {{enFg}};">EN</button>
+          <button type="button" class="lng" onClick="{{setPl}}" aria-pressed="{{plPressed}}" style="background: {{plBg}}; color: {{plFg}};">PL</button>
+        </div>
+      </div>
+    </header>
+
+    <article class="note doc" style="position: relative; max-width: 780px; width: 100%; align-self: center; padding: 40px 44px; box-sizing: border-box;">
+      <span class="tape" aria-hidden="true"></span>
+      <span class="hand" style="font-size: 24px; color: #D33F2F;">zasady gry fair</span>
+      <h1 style="margin: 4px 0 6px; font-size: 38px; font-weight: 800; letter-spacing: -0.02em;">Regulamin</h1>
+      <p style="color: #6B675F; font-size: 14px;">Obowiązuje od 20 listopada 2026 r.</p>
+      <sc-if value="{{isEn}}" hint-placeholder-val="{{true}}">
+        <p lang="en" style="margin: 14px 0 6px; padding: 12px 16px; background: #F4F1E8; border-left: 3px solid #1F3A93; font-size: 14px; line-height: 1.55; color: #3A3934;">This document is available in Polish only, as the game is run from Poland. In short: play fair, nicknames aren't moderated and are your own responsibility, the game is provided as is with no guarantees, and you can report problems via <a href="https://github.com/Norbertx23/battleship/issues">GitHub Issues</a>.</p>
+      </sc-if>
+
+      <h2>1. Kilka słów na start</h2>
+      <ol>
+        <li>Regulamin określa zasady korzystania z gry przeglądarkowej Battleship (dalej: „Gra”), dostępnej pod adresem <a href="https://battleship.swistak.fun/">https://battleship.swistak.fun/</a>.</li>
+        <li>Grę prowadzi hobbystycznie Norbert Świstak (dalej: „Autor”), kontakt: <a href="mailto:swistak.fun@gmail.com">swistak.fun@gmail.com</a> lub <a href="https://github.com/Norbertx23/battleship/issues">GitHub Issues</a>.</li>
+        <li>Gra jest bezpłatna, nie wymaga zakładania konta i nie zawiera reklam ani płatności.</li>
+        <li>Kod źródłowy Gry jest otwarty i udostępniony na licencji MIT w serwisie GitHub.</li>
+      </ol>
+
+      <h2>2. Czego potrzebujesz</h2>
+      <ol>
+        <li>Urządzenia z dostępem do internetu i aktualnej przeglądarki (Chrome, Firefox, Safari lub Edge) z włączonym JavaScriptem.</li>
+        <li>Rozpoczęcie gry oznacza akceptację Regulaminu. Możesz przestać korzystać z Gry w każdej chwili, po prostu zamykając stronę.</li>
+      </ol>
+
+      <h2>3. Zasady korzystania</h2>
+      <ol>
+        <li>Graj uczciwie i z szacunkiem dla innych graczy.</li>
+        <li>Zabronione jest używanie nicków wulgarnych, obraźliwych, nawołujących do nienawiści, podszywających się pod inne osoby lub zawierających cudze dane osobowe.</li>
+        <li>Zabronione jest zakłócanie działania Gry, w szczególności ataki na serwer, automatyczne skrypty (boty) oraz wykorzystywanie błędów do uzyskania przewagi.</li>
+        <li>Gra jest przeznaczona do prywatnej rozrywki.</li>
+      </ol>
+
+      <h2>4. Nicki</h2>
+      <ol>
+        <li>Nick jest widoczny publicznie w historii meczów i rankingu.</li>
+        <li>Nicki nie są filtrowane ani moderowane. Za wybrany nick odpowiada wyłącznie gracz, który go wpisał.</li>
+        <li>Jeśli uważasz, że jakiś nick narusza prawo lub Twoje prawa (np. zawiera Twoje dane), poproś o jego usunięcie przez <a href="https://github.com/Norbertx23/battleship/issues">GitHub Issues</a>. Nie podawaj w zgłoszeniu danych osobowych, bo zgłoszenia są publiczne.</li>
+        <li>Autor może usunąć nick naruszający Regulamin wraz z powiązanymi wpisami.</li>
+      </ol>
+
+      <h2>5. Odpowiedzialność</h2>
+      <ol>
+        <li>Gra jest udostępniana bezpłatnie, w stanie „takim, jaki jest”, bez gwarancji, że będzie działać nieprzerwanie, bezbłędnie lub bez utraty danych, w tym wyników i historii meczów.</li>
+        <li>Autor może w każdej chwili przerwać działanie Gry, zmienić ją lub całkowicie zakończyć jej udostępnianie, bez obowiązku zachowania wyników.</li>
+        <li>Autor nie odpowiada za treści wpisane przez graczy, w tym za nicki, ani za skutki ich użycia. Treść, o której bezprawności Autor otrzyma wiarygodną informację, zostanie niezwłocznie usunięta.</li>
+        <li>Autor nie odpowiada za przerwy w działaniu wynikające z przyczyn od niego niezależnych, w tym awarii hostingu, sieci lub urządzenia gracza.</li>
+        <li>W zakresie dopuszczalnym przez prawo odpowiedzialność Autora jest wyłączona. Postanowienia tego punktu nie ograniczają odpowiedzialności za szkodę wyrządzoną umyślnie ani praw przysługujących konsumentom na podstawie bezwzględnie obowiązujących przepisów.</li>
+      </ol>
+
+      <h2>6. Reklamacje i zgłoszenia</h2>
+      <ol>
+        <li>Problemy z działaniem Gry oraz reklamacje zgłaszaj przez <a href="https://github.com/Norbertx23/battleship/issues">GitHub Issues</a> lub na adres <a href="mailto:swistak.fun@gmail.com">swistak.fun@gmail.com</a>.</li>
+        <li>Opisz problem. Odpowiemy w ciągu 14 dni.</li>
+      </ol>
+
+      <h2>7. Postanowienia końcowe</h2>
+      <ol>
+        <li>Zasady przetwarzania danych opisuje <a href="Privacy.dc.html">Polityka prywatności</a>.</li>
+        <li>Autor może zmienić Regulamin. Nowa wersja obowiązuje od daty opublikowania na tej stronie.</li>
+        <li>W sprawach nieuregulowanych stosuje się prawo polskie, w szczególności ustawę o świadczeniu usług drogą elektroniczną i Kodeks cywilny.</li>
+      </ol>
+    </article>
+  </div>
+  <footer style="border-top: 1px dashed #CFC8B8;">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 2px 24px 2px 104px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 0 16px; align-items: center; justify-content: space-between; font-size: 10px; color: #6B675F;">
+      <span>{{t.footer}}</span>
+      <nav aria-label="Footer" style="display: flex; flex-wrap: wrap; gap: 0 12px; align-items: center; font-size: 11px; font-weight: 700;">
+        <a href="Privacy.dc.html" style="display: inline-flex; align-items: center; min-height: 28px;">{{t.privacy}}</a>
+        <a href="Terms.dc.html" style="display: inline-flex; align-items: center; min-height: 28px;">{{t.terms}}</a>
+        <a href="https://github.com/Norbertx23/battleship" style="display: inline-flex; align-items: center; gap: 4px; min-height: 28px;"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 1.98 0 1.428-.015 2.58-.015 2.88 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>GitHub</a>
+      </nav>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  langVals(T) {
+    var self = this;
+    var lang = (this.state && this.state.lang) || 'en';
+    var C = {
+      en: { navLobby: 'Lobby', navHistory: 'Match history', navRules: 'How to play', privacy: 'Privacy', terms: 'Terms', footer: 'Battleship · open source (MIT) · Icons: Lucide (ISC), Simple Icons (CC0) · Fonts: Caveat, Nunito (OFL)' },
+      pl: { navLobby: 'Lobby', navHistory: 'Historia meczów', navRules: 'Jak grać', privacy: 'Prywatność', terms: 'Regulamin', footer: 'Battleship · open source (MIT) · Ikony: Lucide (ISC), Simple Icons (CC0) · Fonty: Caveat, Nunito (OFL)' }
+    };
+    var en = lang === 'en';
+    return {
+      lang: lang,
+      t: Object.assign({}, C[lang], T[lang]),
+      setEn: function () { self.setState({ lang: 'en' }); },
+      setPl: function () { self.setState({ lang: 'pl' }); },
+      enPressed: en ? 'true' : 'false', plPressed: en ? 'false' : 'true',
+      enBg: en ? '#1F2A44' : 'transparent', enFg: en ? '#FFFFFF' : '#1F2A44',
+      plBg: en ? 'transparent' : '#1F2A44', plFg: en ? '#1F2A44' : '#FFFFFF'
+    };
+  }
+  renderVals() {
+    var L = this.langVals({ en: {}, pl: {} });
+    return Object.assign({ isEn: L.lang === 'en', isPl: L.lang === 'pl' }, L);
+  }
+}
+</script>
+</body>
+</html>
