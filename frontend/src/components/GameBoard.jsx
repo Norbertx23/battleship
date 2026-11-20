@@ -1,13 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, RotateCw, Trash2, X } from 'lucide-react';
 import CodeField from './CodeField';
+import { useNotice } from '../notice/useNotice';
+import PaperLayout from './layout/PaperLayout';
+import BoardFrame from './board/BoardFrame';
+import { cellClasses } from './board/cellClasses';
 
 const BOARD_SIZE = 10;
 const createEmptyBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
-// Od lg plansza skaluje sie do okna: 52vh pilnuje, zeby zmiescila sie w pionie razem
-// z naglowkiem i przyciskiem, 27vw - zeby obie plansze i panel floty wroga zmiescily sie
-// w wierszu. Dolny limit to dotychczasowe 360px, gorny 540px.
-const BOARD_GRID_CLASSES = 'grid grid-cols-10 grid-rows-10 gap-px w-[85vw] max-w-[280px] h-[85vw] max-h-[280px] md:max-w-none md:max-h-none md:w-[320px] md:h-[320px] lg:size-[clamp(360px,min(27vw,52vh),540px)] mx-auto';
+const COLS = 'ABCDEFGHIJ';
+const cellLabel = (i) => `${COLS[i % BOARD_SIZE]}${Math.floor(i / BOARD_SIZE) + 1}`;
+const BOARD_WIDTH = 'w-[min(400px,calc(100vw-76px))] lg:w-[clamp(320px,min(26vw,50vh),440px)]';
+
+const overlayCells = (ship) => {
+    const rot = (ship.rotation % 360 + 360) % 360;
+    return Array.from({ length: ship.size }, (_, i) => {
+        const x = ship.x + (rot === 0 ? i : rot === 180 ? -i : 0);
+        const y = ship.y + (rot === 90 ? i : rot === 270 ? -i : 0);
+        return y * BOARD_SIZE + x;
+    });
+};
 
 const getShipCells = (ships) => {
     const cells = new Set();
@@ -35,7 +49,10 @@ const boardFromShots = (shots) => {
     return board;
 };
 
-export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, resumeState }) {
+export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, opponent, resumeState }) {
+    const { t } = useTranslation();
+    const { notify } = useNotice();
+    const twoFingerAtRef = useRef(0);
     const [phase, setPhase] = useState(() => (resumeState && resumeState.phase) ? resumeState.phase : (resumeState ? 'battle' : 'placement'));
     const [myShips, setMyShips] = useState(() => resumeState ? resumeShipsToOverlay(resumeState.my_ships) : []);
     const [myBoard, setMyBoard] = useState(() => resumeState ? boardFromShots(resumeState.enemy_shots) : createEmptyBoard());
@@ -47,7 +64,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
     const [sunkMessage, setSunkMessage] = useState(null);
     const [opponentHitMessage, setOpponentHitMessage] = useState(null);
     const [isMarkMode, setIsMarkMode] = useState(false);
-    const [showBoardAfterGame, setShowBoardAfterGame] = useState(false);
     const [playAgain, setPlayAgain] = useState('idle');
     const [graceInfo, setGraceInfo] = useState(null);
     const [draggedShip, setDraggedShip] = useState(null);
@@ -158,7 +174,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
                 if (result === 'hit' && data.sunk_sizes) {
                     setEnemySunkShips(prev => {
                         if (data.sunk_sizes.length > prev.length) {
-                            setSunkMessage("ENEMY SHIP DESTROYED!");
+                            setSunkMessage(true);
                             setTimeout(() => setSunkMessage(null), 3000);
                         }
                         return data.sunk_sizes;
@@ -167,7 +183,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             } else {
                 setMyBoard(prev => { const newBoard = [...prev]; newBoard[index] = result; return newBoard; });
                 if (result === 'hit') {
-                    setOpponentHitMessage(`OPPONENT HIT YOUR SHIP ON ROW ${y + 1} COL ${x + 1}`);
+                    setOpponentHitMessage(cellLabel(index));
                     if (opponentHitTimerRef.current) clearTimeout(opponentHitTimerRef.current);
                     opponentHitTimerRef.current = setTimeout(() => setOpponentHitMessage(null), 3000);
                 }
@@ -187,7 +203,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             setGraceInfo(null);
         });
         const handleError = (data) => {
-            alert(data.message);
+            notify(data);
             setPhase('placement');
         };
         socket.on('error', handleError);
@@ -197,12 +213,12 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             if (data.opponent_left) setPlayAgain('unavailable');
             if (data.forfeit) {
                 setTimeout(() => {
-                    alert("ENEMY RETREATED: " + data.message);
+                    notify({ ...data, tone: 'info' });
                     if (onLeave) onLeave();
                 }, 100);
             } else if (!data.silent) {
                 setTimeout(() => {
-                    alert("SIGNAL LOST: " + data.message + "\nReturning to Lobby.");
+                    notify(data);
                     if (onLeave) onLeave();
                 }, 100);
             }
@@ -219,7 +235,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
             socket.off('player_disconnected', handlePlayerDisconnected);
             socket.off('play_again_pending', handlePlayAgainPending);
         };
-    }, [socket]);
+    }, [socket, notify]);
 
     const isPaused = graceInfo !== null;
     useEffect(() => {
@@ -400,427 +416,345 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, re
         }
     };
 
-    const headerColorClass = phase === 'battle'
-        ? (isMyTurn ? 'text-[#39ff14]' : 'text-red-500')
-        : 'text-[#00f2ea]';
-    const enemyShipCells = phase === 'game_over' ? getShipCells(enemyShips) : null;
+
+    const handleClearBoard = () => {
+        if (phase !== 'placement') return;
+        setMyShips([]);
+        setSelectedShipId(null);
+    };
+
+    const handleRadarClick = (e, index) => {
+        if (Date.now() - twoFingerAtRef.current < 600) return;
+        handleFireOrMark(e, index);
+    };
+
+    const handleRadarTouch = (e, index) => {
+        if (e.touches && e.touches.length === 2) {
+            twoFingerAtRef.current = Date.now();
+            handleMarkRadar(e, index);
+        }
+    };
 
     const handlePlayAgain = () => {
         socket.emit('play_again', { room_id: roomCode });
         setPlayAgain('waiting');
     };
 
-    const playAgainLabel = {
-        idle: 'PLAY AGAIN',
-        waiting: 'WAITING FOR OPPONENT...',
-        asked: 'ACCEPT PLAY AGAIN',
-        unavailable: 'OPPONENT LEFT',
-    }[playAgain];
-    const playAgainDisabled = playAgain === 'waiting' || playAgain === 'unavailable';
-    const showTopPlayAgain = phase === 'game_over' && showBoardAfterGame;
-    const playAgainButtonClasses = `px-4 py-1.5 border rounded text-xs font-bold tracking-widest whitespace-nowrap transition-colors ${playAgainDisabled ? 'border-gray-700 text-gray-600 cursor-not-allowed' : playAgain === 'asked' ? 'border-[#39ff14] text-[#39ff14] shadow-[0_0_12px_rgba(57,255,20,0.35)] hover:bg-[#39ff14]/10' : 'border-[#00f2ea] text-[#00f2ea] hover:bg-[#00f2ea]/10'}`;
+    const opponentName = opponent || t('game.opponentFallback');
+    const enemyShipCells = phase === 'game_over' ? getShipCells(enemyShips) : null;
+    const myShipCells = new Set(myShips.flatMap(overlayCells));
+    const allValid = myShips.every(s => isPlacementValid(s.x, s.y, s.size, s.rotation, s.id));
+    const canConfirm = allShipsDeployed && allValid;
+    const shipsLeft = shipCategories.reduce((sum, { size, maxCount }) => sum + maxCount - myShips.filter(s => s.size === size).length, 0);
 
-    return (
-        <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-6xl xl:max-w-[1500px] relative">
-            {}
-            <div className="absolute top-0 left-0 w-full flex justify-between items-start px-4 z-10">
-                <button
-                    onClick={onLeave}
-                    className="text-[#00f2ea] flex items-center gap-2 hover:text-white transition-colors text-sm font-bold tracking-widest"
+    const myCellKind = (i) => {
+        if (phase === 'placement') return 'empty';
+        const cell = myBoard[i];
+        if (myShipCells.has(i)) return cell === 'hit' ? 'shipHit' : 'ship';
+        if (cell === 'hit') return 'hit';
+        if (cell === 'miss') return 'miss';
+        return 'empty';
+    };
+
+    const enemyCellKind = (i) => {
+        const cell = enemyBoard[i];
+        if (cell === 'hit') return phase === 'game_over' ? 'sunk' : 'hit';
+        if (enemyShipCells && enemyShipCells.has(i)) return 'ghost';
+        if (cell === 'miss') return 'miss';
+        if (cell === 'marked') return 'mark';
+        return 'empty';
+    };
+
+    const playAgainLabel = {
+        idle: t('gameOver.again'),
+        waiting: t('gameOver.waiting', { nick: opponentName }),
+        asked: t('gameOver.accept'),
+        unavailable: t('gameOver.unavailable'),
+    }[playAgain];
+    const playAgainHint = { idle: '', waiting: t('gameOver.sent'), asked: t('gameOver.wants', { nick: opponentName }), unavailable: '' }[playAgain];
+    const playAgainDisabled = playAgain === 'waiting' || playAgain === 'unavailable';
+
+    const title = {
+        placement: t('deploy.title'),
+        waiting: t('deploy.waiting'),
+        battle: isMyTurn ? t('battle.turn') : t('battle.enemyTurn'),
+    }[phase];
+
+    const status = sunkMessage
+        ? t('battle.sunk')
+        : opponentHitMessage ? t('battle.opponentHit', { cell: opponentHitMessage }) : null;
+
+    const players = (
+        <span className="flex flex-wrap items-center gap-x-1.5 text-[15px] text-pencil">
+            <span className="max-w-[12ch] truncate font-bold text-ink-dark" title={nick}>{nick}</span>
+            {opponent && <><span className="font-hand text-2xl text-pen">vs</span><span className="max-w-[12ch] truncate font-bold text-ink-dark" title={opponent}>{opponent}</span></>}
+            {roomCode && <><span>· {t('game.room')}</span><CodeField code={roomCode} revealable size="sm" /></>}
+        </span>
+    );
+
+    const note = 'flex flex-col items-center gap-3.5 bg-white p-3 sm:p-[22px] note-shadow';
+    const h2Hand = 'm-0 self-start font-hand text-[32px] font-bold';
+
+    const myBoardSection = (
+        <section className={`${note} -rotate-[0.4deg]`}>
+            <h2 className={h2Hand}>{t('game.myFleet')}</h2>
+            <div data-slot="board-width" className={BOARD_WIDTH}>
+                <BoardFrame
+                    label={t('game.myFleet')}
+                    boardProps={{
+                        onPointerLeave: handleGridPointerLeave,
+                        style: phase === 'placement' ? { touchAction: 'none', WebkitTouchCallout: 'none', userSelect: 'none' } : undefined,
+                    }}
                 >
-                    &larr; {phase === 'game_over' ? 'RETURN TO LOBBY' : 'ABORT MISSION'}
-                </button>
-                {showTopPlayAgain && (
+                    {myBoard.map((_, i) => (
+                        <div
+                            key={`cell-${i}`}
+                            data-state={myCellKind(i)}
+                            onPointerEnter={(e) => phase === 'placement' ? handlePointerEnter(e, i) : null}
+                            onPointerUp={(e) => phase === 'placement' ? handlePointerUp(e, i) : null}
+                            className={cellClasses(myCellKind(i))}
+                        />
+                    ))}
+
+                    {phase === 'placement' && draggedShip && dragOverIndex !== null && (() => {
+                        const px = dragOverIndex % BOARD_SIZE;
+                        const py = Math.floor(dragOverIndex / BOARD_SIZE);
+                        const valid = isPlacementValid(px, py, draggedShip.size, draggedShip.rotation, draggedShip.source === 'board' ? draggedShip.id : null);
+                        const cw = 100 / BOARD_SIZE;
+                        return (
+                            <div
+                                className={`pointer-events-none absolute border-2 border-dashed ${valid ? 'border-ink bg-ink/25' : 'border-pen bg-pen/30'}`}
+                                style={{
+                                    width: `${cw * draggedShip.size}%`,
+                                    height: `${cw}%`,
+                                    left: `${px * cw}%`,
+                                    top: `${py * cw}%`,
+                                    transform: `rotate(${draggedShip.rotation}deg)`,
+                                    transformOrigin: `${50 / draggedShip.size}% 50%`,
+                                }}
+                            />
+                        );
+                    })()}
+
+                    {phase === 'placement' && myShips.map(ship => {
+                        const { x, y, size, rotation, id } = ship;
+                        const cw = 100 / BOARD_SIZE;
+                        const isSelected = selectedShipId === id;
+                        const isDragged = draggedShip && draggedShip.id === id;
+                        const valid = isPlacementValid(x, y, size, rotation, id);
+                        return (
+                            <div
+                                key={`placed-${id}`}
+                                data-ship={id}
+                                onPointerDown={(e) => handlePointerDown(e, ship, 'board')}
+                                className={`absolute cursor-pointer select-none transition-transform duration-200
+                                    ${!valid ? 'z-20 bg-pen/30 shadow-[inset_0_0_0_2px_var(--color-pen)]'
+                                        : isSelected ? 'z-10 bg-ship shadow-[inset_0_0_0_3px_var(--color-pen)]' : 'bg-ship shadow-[inset_0_0_0_2px_var(--color-ink)]'}
+                                    ${isDragged ? 'pointer-events-none opacity-25' : ''}`}
+                                style={{
+                                    width: `${cw * size}%`,
+                                    height: `${cw}%`,
+                                    left: `${x * cw}%`,
+                                    top: `${y * cw}%`,
+                                    transform: `rotate(${rotation}deg)`,
+                                    transformOrigin: `${50 / size}% 50%`,
+                                    touchAction: 'none',
+                                    WebkitTouchCallout: 'none',
+                                    userSelect: 'none',
+                                }}
+                            />
+                        );
+                    })}
+                </BoardFrame>
+            </div>
+        </section>
+    );
+
+    const radarSection = (
+        <section className={`${note} rotate-[0.6deg]`}>
+            <div className="flex flex-wrap items-center justify-between gap-3 self-stretch">
+                <h2 className="m-0 font-hand text-[32px] font-bold">{phase === 'game_over' ? t('gameOver.theirFleet') : t('battle.theirSea')}</h2>
+                {phase === 'battle' && (
                     <button
-                        onClick={handlePlayAgain}
-                        disabled={playAgainDisabled}
-                        className={`hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${playAgainButtonClasses}`}
+                        type="button"
+                        onClick={() => setIsMarkMode(v => !v)}
+                        aria-pressed={isMarkMode}
+                        className={`sketch-border min-h-10 cursor-pointer border-ink-dark px-4 text-sm font-extrabold text-ink-dark ${isMarkMode ? 'bg-highlight' : 'bg-white'}`}
                     >
-                        {playAgainLabel}
+                        {isMarkMode ? t('battle.markOn') : t('battle.markOff')}
                     </button>
                 )}
-                {nick && (
-                    <div className="text-right">
-                        <span className="text-gray-500 text-[10px] tracking-widest">OPERATOR</span>
-                        <div className="text-[#a855f7] font-bold tracking-widest text-sm">{nick.toUpperCase()}</div>
-                    </div>
-                )}
             </div>
+            <div data-slot="board-width" className={BOARD_WIDTH}>
+                <BoardFrame label={t('battle.theirSea')}>
+                    {enemyBoard.map((_, i) => {
+                        const kind = enemyCellKind(i);
+                        if (phase === 'game_over') return <div key={i} data-state={kind} className={cellClasses(kind)} />;
+                        return (
+                            <button
+                                key={i}
+                                type="button"
+                                aria-label={cellLabel(i)}
+                                data-state={kind}
+                                onClick={(e) => handleRadarClick(e, i)}
+                                onContextMenu={(e) => handleMarkRadar(e, i)}
+                                onTouchStart={(e) => handleRadarTouch(e, i)}
+                                className={cellClasses(kind, { interactive: true })}
+                            />
+                        );
+                    })}
+                </BoardFrame>
+            </div>
+        </section>
+    );
 
-            {showTopPlayAgain && (
-                <button
-                    onClick={handlePlayAgain}
-                    disabled={playAgainDisabled}
-                    className={`md:hidden relative z-20 mt-10 ${playAgainButtonClasses}`}
-                >
-                    {playAgainLabel}
-                </button>
-            )}
+    const fleetAside = (
+        <aside className="flex max-w-[280px] flex-[1_1_220px] -rotate-1 flex-col gap-2.5 bg-white p-[22px] note-shadow">
+            <h2 className="m-0 mb-1 font-hand text-[30px] font-bold">{t('battle.afloat')}</h2>
+            {shipCategories.flatMap(({ size, maxCount }) => {
+                const sunk = enemySunkShips.filter(s => s === size).length;
+                return Array.from({ length: maxCount }, (_, k) => {
+                    const isSunk = k < sunk;
+                    return (
+                        <div key={`${size}-${k}`} className="flex items-center justify-between gap-2.5 text-[15px]">
+                            <span className={isSunk ? 'text-placeholder line-through decoration-pen decoration-2' : ''}>{t('battle.shipName', { n: size })}</span>
+                            <span aria-hidden="true" className="flex gap-0.5">
+                                {Array.from({ length: size }).map((__, p) => (
+                                    <span key={p} className={`size-3.5 border-[1.5px] border-ink ${isSunk ? 'bg-[#F4C9C2]' : 'bg-ship'}`} />
+                                ))}
+                            </span>
+                        </div>
+                    );
+                });
+            })}
+            <p className="m-0 mt-2.5 font-hand text-[22px] leading-tight text-pencil">{t('battle.tip')}</p>
+        </aside>
+    );
 
-            <h1 className={`text-2xl md:text-3xl lg:text-4xl cyber-text-glow font-bold ${headerColorClass} ${showTopPlayAgain ? 'md:mt-12' : 'mt-10 md:mt-6 lg:mt-2'} text-center px-2 transition-colors`}>
-                {phase === 'placement' && "DEPLOY YOUR FLEET"}
-                {phase === 'waiting' && "WAITING FOR OPPONENT..."}
-                {phase === 'battle' && (isMyTurn ? "YOUR TURN - FIRE!" : "ENEMY TURN - EVADE!")}
-                {phase === 'game_over' && `${result} - BATTLE REVIEW`}
-            </h1>
+    const legendAside = (
+        <aside className="flex max-w-[260px] flex-[1_1_200px] -rotate-1 flex-col gap-2.5 bg-white p-5 text-sm text-[#4A4843] note-shadow">
+            <h2 className="m-0 font-hand text-[26px] font-bold text-ink-dark">{t('gameOver.key')}</h2>
+            <div className="flex items-center gap-2.5"><span className={`${cellClasses('sunk')} w-6 border border-gridline`} />{t('gameOver.sunk')}</div>
+            <div className="flex items-center gap-2.5"><span className={`${cellClasses('miss')} w-6 border border-gridline`} />{t('gameOver.miss')}</div>
+            <div className="flex items-center gap-2.5"><span className={`${cellClasses('ghost')} w-6`} />{t('gameOver.never')}</div>
+        </aside>
+    );
 
-            {sunkMessage && (
-                <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] bg-red-600/90 border-2 border-red-500 text-white font-black text-xl md:text-3xl px-8 py-4 shadow-[0_0_40px_red] animate-pulse whitespace-nowrap pointer-events-none text-shadow-lg">
-                    {sunkMessage}
-                </div>
-            )}
-
-            <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 w-full justify-center items-center lg:items-start" onContextMenu={handleContextMenu}>
-                {}
-                <div className="cyber-panel p-4 flex flex-col items-center">
-                    <h2 className="text-[#39ff14] mb-2 font-bold">MY FLEET</h2>
-                    <div
-                        className={`${BOARD_GRID_CLASSES} relative`}
-                        onPointerLeave={handleGridPointerLeave}
-                        style={{
-                            touchAction: phase === 'placement' ? 'none' : 'auto',
-                            WebkitTouchCallout: phase === 'placement' ? 'none' : 'auto',
-                            WebkitUserSelect: phase === 'placement' ? 'none' : 'auto',
-                            userSelect: phase === 'placement' ? 'none' : 'auto'
-                        }}
-                    >
-                        {}
-                        {myBoard.map((cell, i) => (
+    const shipyard = (
+        <aside className="flex max-w-[360px] flex-[1_1_300px] flex-col gap-5">
+            <section className="relative flex rotate-[0.6deg] flex-col gap-2 bg-white px-5 pt-6 pb-5 note-shadow">
+                <span aria-hidden="true" className="absolute -top-3 left-1/2 h-6 w-24 -ml-12 -rotate-3 bg-[rgba(244,217,120,0.75)]" />
+                <h2 className="m-0 mb-1.5 font-hand text-[30px] font-bold text-ink">{t('deploy.shipyard')}</h2>
+                {shipCategories.map(({ size, maxCount }) => {
+                    const left = maxCount - myShips.filter(s => s.size === size).length;
+                    const available = left > 0;
+                    return (
+                        <div key={`yard-${size}`} className={`flex items-center gap-3.5 px-3.5 py-2.5 ${available ? '' : 'opacity-45'}`}>
                             <div
-                                key={`cell-${i}`}
-                                onPointerEnter={(e) => phase === 'placement' ? handlePointerEnter(e, i) : null}
-                                onPointerUp={(e) => phase === 'placement' ? handlePointerUp(e, i) : null}
-                                className={`
-                                    border border-[#39ff1433] flex items-center justify-center text-xs overflow-hidden
-                                    bg-[#00000055]
-                                    ${cell === 'hit' ? 'text-red-500' : ''}
-                                    ${cell === 'miss' ? 'bg-gray-500 opacity-50' : ''}
-                                `}
+                                onPointerDown={(e) => { if (available) handlePointerDown(e, { size }, 'yard'); }}
+                                className={`flex gap-0.5 ${available ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed'}`}
+                                style={{ touchAction: 'none', WebkitTouchCallout: 'none', userSelect: 'none' }}
                             >
-                                {cell === 'hit' && 'X'}
-                                {cell === 'miss' && 'o'}
+                                {Array.from({ length: size }).map((_, i) => (
+                                    <span key={i} className="size-5 bg-ship shadow-[inset_0_0_0_2px_var(--color-ink)]" />
+                                ))}
                             </div>
-                        ))}
-
-                        {}
-                        {phase === 'placement' && draggedShip && dragOverIndex !== null && (
-                            () => {
-                                const previewX = dragOverIndex % BOARD_SIZE;
-                                const previewY = Math.floor(dragOverIndex / BOARD_SIZE);
-                                const previewRotation = draggedShip.rotation;
-                                const isValid = isPlacementValid(previewX, previewY, draggedShip.size, previewRotation, draggedShip.source === 'board' ? draggedShip.id : null);
-                                const cellWidth = 100 / BOARD_SIZE;
-                                const width = cellWidth * draggedShip.size;
-                                const height = cellWidth;
-                                const left = previewX * cellWidth;
-                                const top = previewY * cellWidth;
-
-                                return (
-                                    <div
-                                        className={`absolute pointer-events-none border-2 border-dashed transition-transform duration-200
-                                            ${isValid ? 'bg-[#39ff14] border-white opacity-50' : 'bg-red-500 border-red-900 opacity-60 animate-pulse'}
-                                        `}
-                                        style={{
-                                            width: `calc(${width}% - 4px)`,
-                                            height: `calc(${height}% - 4px)`,
-                                            left: `calc(${left}% + 2px)`,
-                                            top: `calc(${top}% + 2px)`,
-                                            transform: `rotate(${previewRotation}deg)`,
-                                            transformOrigin: `${50 / draggedShip.size}% 50%`
-                                        }}
-                                    />
-                                );
-                            }
-                        )()}
-
-                        {}
-                        {myShips.map(ship => {
-                            const { x, y, size, rotation, id } = ship;
-                            const cellWidth = 100 / BOARD_SIZE;
-                            const width = cellWidth * size;
-                            const height = cellWidth;
-                            const left = x * cellWidth;
-                            const top = y * cellWidth;
-                            const isSelected = selectedShipId === id;
-                            const isDragged = draggedShip && draggedShip.id === id;
-                            const isValid = isPlacementValid(x, y, size, rotation, id);
-
-                            return (
-                                <div
-                                    key={`placed-${id}`}
-                                    onPointerDown={(e) => phase === 'placement' ? handlePointerDown(e, ship, 'board') : null}
-                                    className={`
-                                        absolute shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-all duration-200 select-none
-                                        ${!isValid ? 'bg-red-500 animate-pulse border-2 border-red-900 shadow-[0_0_15px_red] z-20'
-                                            : (isSelected ? 'bg-[#ff9900] z-10 shadow-[0_0_15px_#ff9900]' : 'bg-[#39ff14]')}
-                                        ${phase === 'placement' ? 'cursor-pointer hover:brightness-125' : ''}
-                                        ${isDragged ? 'opacity-20 grayscale blur-[1px] pointer-events-none' : ''}
-                                    `}
-                                    style={{
-                                        width: `calc(${width}% - 4px)`,
-                                        height: `calc(${height}% - 4px)`,
-                                        left: `calc(${left}% + 2px)`,
-                                        top: `calc(${top}% + 2px)`,
-                                        transform: `rotate(${rotation}deg) scale(${isSelected ? 1.05 : 1})`,
-                                        transformOrigin: `${50 / size}% 50%`,
-                                        touchAction: 'none',
-                                        WebkitTouchCallout: 'none',
-                                        WebkitUserSelect: 'none',
-                                        userSelect: 'none'
-                                    }}
-                                >
-                                    {}
-                                    {phase !== 'placement' && Array.from({ length: size }).map((_, i) => {
-                                        const srot = (rotation % 360 + 360) % 360;
-                                        let hx = x, hy = y;
-                                        if (srot === 0) hx += i;
-                                        else if (srot === 90) hy += i;
-                                        else if (srot === 180) hx -= i;
-                                        else if (srot === 270) hy -= i;
-
-                                        const isHit = myBoard[hy * BOARD_SIZE + hx] === 'hit';
-
-                                        if (!isHit) return null;
-
-                                        return (
-                                            <div
-                                                key={`hit-${id}-${i}`}
-                                                className="absolute text-red-500 font-black text-xl md:text-2xl drop-shadow-[0_0_5px_red] flex items-center justify-center"
-                                                style={{
-                                                    width: `${100 / size}%`,
-                                                    height: '100%',
-                                                    left: `${(i / size) * 100}%`,
-                                                    top: 0
-                                                }}
-                                            >
-                                                X
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {}
-                    {opponentHitMessage && (
-                        <div className="mt-4 w-full text-red-500 font-bold text-xs py-2 animate-pulse shadow-[0_0_10px_red] border border-red-500 bg-red-900/30 text-center uppercase tracking-widest pointer-events-none">
-                            {opponentHitMessage}
+                            <span className="flex-grow text-[15px] font-extrabold">{t('deploy.mast', { n: size })}</span>
+                            <span className={`font-hand text-2xl font-bold ${available ? 'text-ink' : 'text-pencil'}`}>{available ? `× ${left}` : t('deploy.done')}</span>
                         </div>
-                    )}
+                    );
+                })}
+                <div className="mt-2 flex flex-wrap gap-2.5">
+                    <button type="button" onClick={handleRotate} className="sketch-border inline-flex min-h-11 flex-[1_1_120px] cursor-pointer items-center justify-center gap-2 border-ink-dark bg-white text-[15px] font-extrabold text-ink-dark">
+                        <RotateCw size={18} aria-hidden="true" />{globalRotation % 180 === 0 ? t('deploy.rotH') : t('deploy.rotV')}
+                    </button>
+                    <button type="button" onClick={() => selectedShipId && handleRemoveShip(selectedShipId)} disabled={!selectedShipId} className="sketch-border inline-flex min-h-11 flex-[1_1_120px] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-[15px] font-extrabold text-pen-dark disabled:cursor-not-allowed disabled:opacity-40">
+                        <X size={18} aria-hidden="true" />{t('deploy.remove')}
+                    </button>
+                    <button type="button" onClick={handleClearBoard} className="sketch-border inline-flex min-h-11 flex-[1_1_120px] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-[15px] font-extrabold text-pen-dark">
+                        <Trash2 size={18} aria-hidden="true" />{t('deploy.clear')}
+                    </button>
                 </div>
+            </section>
 
-                {}
-                {phase !== 'placement' && phase !== 'waiting' && (
-                    <div className="flex flex-col lg:flex-row gap-4 xl:relative">
-                        <div className="cyber-panel p-4 flex flex-col items-center">
-                            <h2 className="text-red-500 mb-2 font-bold">RADAR (Right-Click to Mark)</h2>
-                            <div className={BOARD_GRID_CLASSES}>
-                                {enemyBoard.map((cell, i) => {
-                                    const revealShip = enemyShipCells && enemyShipCells.has(i) && cell !== 'hit';
-                                    return (
-                                    <div
-                                        key={i}
-                                        onClick={(e) => handleFireOrMark(e, i)}
-                                        onContextMenu={(e) => handleMarkRadar(e, i)}
-                                        className={`
-                                             border border-[#ff000033] flex items-center justify-center cursor-crosshair text-xs overflow-hidden transition-all
-                                            ${cell === 'hit' ? 'bg-red-500 shadow-[0_0_15px_red]' : ''}
-                                            ${revealShip ? 'bg-[#39ff14] border-[#39ff14] shadow-[0_0_10px_#39ff14]' : ''}
-                                            ${!revealShip && cell === 'miss' ? 'bg-gray-600' : ''}
-                                            ${!revealShip && cell === 'marked' ? 'bg-[#eab308] border-[#eab308] shadow-[0_0_10px_#eab308]' : ''}
-                                            ${!revealShip && !cell ? 'bg-[#00000055] hover:bg-[#ff000022]' : ''}
-                                        `}
-                                    >
-                                        {cell === 'hit' && 'X'}
-                                        {cell === 'miss' && 'o'}
-                                        {revealShip && <span className="w-2/3 h-2/3 bg-[#0c3d0c] rounded-[1px]" />}
-                                    </div>
-                                    );
-                                })}
-                            </div>
+            <ul className="m-0 flex list-none flex-col gap-2 px-1 text-sm text-[#4A4843]">
+                <li>{t('deploy.tip1')}</li>
+                <li><kbd className="rounded-[5px] border-[1.5px] border-ink-dark bg-white px-1.5 text-[13px] font-extrabold">R</kbd> {t('deploy.tip2')}</li>
+                <li>{t('deploy.tip3')}</li>
+            </ul>
 
-                            {}
-                            <button
-                                onClick={() => setIsMarkMode(!isMarkMode)}
-                                disabled={phase === 'game_over'}
-                                className={`mt-4 w-full py-2 border rounded font-bold text-xs tracking-widest transition-colors 
-                                    ${phase === 'game_over' ? 'bg-gray-800 text-gray-600 border-gray-700 cursor-not-allowed' :
-                                        (isMarkMode
-                                            ? 'bg-[#eab308] text-black border-[#eab308] shadow-[0_0_10px_#eab308]'
-                                            : 'bg-transparent text-gray-400 border-gray-600 hover:text-white hover:border-gray-400')
-                                    }`}
-                            >
-                                {phase === 'game_over' ? 'RADAR OFFLINE' : (isMarkMode ? 'MARK MODE: ON (TAP TO MARK)' : 'MARK MODE: OFF (TAP TO FIRE)')}
-                            </button>
-                        </div>
+            <button
+                type="button"
+                onClick={handleConfirmPlacement}
+                disabled={!canConfirm}
+                className={`sketch-border min-h-14 text-lg font-extrabold text-white ${canConfirm ? 'cursor-pointer border-ink bg-ink' : 'cursor-not-allowed border-disabled bg-disabled'}`}
+            >
+                {canConfirm ? t('deploy.ready') : t('deploy.notReady')}
+            </button>
+        </aside>
+    );
 
-                        {}
-                        <div className="cyber-panel p-4 flex flex-col items-center lg:min-w-[130px] xl:min-w-[150px] xl:absolute xl:left-full xl:top-0 xl:ml-4">
-                            <h2 className="text-[#ff9900] mb-4 font-bold text-sm tracking-widest text-center">ENEMY<br />FLEET</h2>
-                            <div className="flex flex-row lg:flex-col gap-4 justify-center items-center flex-wrap">
-                                {shipCategories.map(({ size, maxCount }) => {
-                                    const sunkCount = enemySunkShips.filter(s => s === size).length;
-                                    const aliveCount = maxCount - sunkCount;
-
-                                    return (
-                                        <div key={`enemy-ship-${size}`} className="flex flex-col items-center justify-center">
-                                            <div className={`flex gap-[2px] mb-1 transition-all ${aliveCount <= 0 ? 'opacity-30 scale-90' : ''}`}>
-                                                {Array.from({ length: size }).map((_, i) => (
-                                                    <div key={i} className={`w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 border border-black ${aliveCount > 0 ? 'bg-gray-500' : 'bg-red-600 shadow-[0_0_5px_red]'}`} />
-                                                ))}
-                                            </div>
-                                            <span className={`text-xs font-bold font-mono transition-all ${aliveCount > 0 ? 'text-gray-400' : 'text-red-500 line-through decoration-[2px] opacity-70'}`}>
-                                                x{aliveCount}
-                                            </span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {}
-                {phase === 'placement' && (
-                    <div className="flex flex-col items-center gap-6 w-full lg:w-[450px] xl:w-[500px]">
-                        {}
-                        <div className="cyber-panel p-4 flex flex-col items-center w-full min-h-[120px]">
-                            <h3 className="text-[#00f2ea] text-sm tracking-widest mb-4">AVAILABLE SHIPS</h3>
-                            <div className="flex flex-wrap gap-4 justify-center items-end [--yard-cell:25px] xl:[--yard-cell:32px]">
-                                {shipCategories.map(({ size, maxCount }) => {
-                                    const placedCount = myShips.filter(s => s.size === size).length;
-                                    const leftCount = maxCount - placedCount;
-                                    const isAvailable = leftCount > 0;
-
-                                    return (
-                                        <div key={`yard-${size}`} className="flex items-center gap-3">
-                                            <div
-                                                onPointerDown={(e) => {
-                                                    if (isAvailable && phase === 'placement') {
-                                                        handlePointerDown(e, { size }, 'yard');
-                                                    }
-                                                }}
-                                                className={`
-                                                    shadow-[0_0_8px_#00f2ea] flex transition-transform select-none
-                                                    ${isAvailable ? 'bg-[#00f2ea] cursor-grab active:cursor-grabbing hover:scale-105' : 'bg-gray-600 grayscale opacity-50 cursor-not-allowed'}
-                                                `}
-                                                style={{
-                                                    width: `calc(var(--yard-cell) * ${size})`,
-                                                    height: 'var(--yard-cell)',
-                                                    background: `repeating-linear-gradient(
-                                                        to right,
-                                                        ${isAvailable ? '#00f2ea' : '#4b5563'},
-                                                        ${isAvailable ? '#00f2ea' : '#4b5563'} calc(var(--yard-cell) - 2px),
-                                                        transparent calc(var(--yard-cell) - 2px),
-                                                        transparent var(--yard-cell)
-                                                    )`,
-                                                    touchAction: 'none',
-                                                    WebkitTouchCallout: 'none',
-                                                    WebkitUserSelect: 'none',
-                                                    userSelect: 'none'
-                                                }}
-                                            />
-                                            <span className={`text-sm font-bold font-mono ${isAvailable ? 'text-white' : 'text-gray-500'}`}>x{leftCount}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {}
-                        <div className="flex flex-col gap-4 items-stretch w-full">
-                            <button onClick={handleRotate} className="cyber-button group relative">
-                                ROTATE (R / Right Click)
-                                {selectedShipId ? (
-                                    <span className="ml-2 text-red-500 font-bold text-xs uppercase">Selected</span>
-                                ) : (
-                                    <span className="ml-2 text-[#a855f7] font-bold text-xs uppercase">
-                                        Next: {globalRotation % 180 === 0 ? 'HORIZONTAL' : 'VERTICAL'}
-                                    </span>
-                                )}
-                            </button>
-
-                            <button
-                                onClick={() => selectedShipId && handleRemoveShip(selectedShipId)}
-                                disabled={!selectedShipId}
-                                className={`cyber-button ${!selectedShipId ? 'opacity-50 cursor-not-allowed' : 'text-red-500 border-red-500 hover:bg-red-500 hover:text-white'}`}
-                            >
-                                REMOVE SHIP (DEL)
-                            </button>
-
-                            <button
-                                onClick={handleConfirmPlacement}
-                                disabled={!(allShipsDeployed && myShips.every(s => isPlacementValid(s.x, s.y, s.size, s.rotation, s.id)))}
-                                className={`cyber-button ${(allShipsDeployed && myShips.every(s => isPlacementValid(s.x, s.y, s.size, s.rotation, s.id))) ? 'bg-[#39ff14] text-black shadow-[0_0_15px_#39ff14]' : 'opacity-50 cursor-not-allowed'}`}
-                            >
-                                CONFIRM DEPLOYMENT
-                            </button>
-                        </div>
-                    </div>
-                )}
+    return (
+        <PaperLayout withNav={false} withFooter={false} headerRight={players} gap="gap-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <button type="button" onClick={onLeave} className="inline-flex min-h-11 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 font-bold text-ink-dark">
+                    <ArrowLeft size={20} aria-hidden="true" />{phase === 'game_over' ? t('gameOver.back') : t('game.leave')}
+                </button>
+                {phase === 'placement' && <span className="font-hand text-[22px] text-pencil">{shipsLeft === 0 ? t('deploy.allPlaced') : t('deploy.left', { n: shipsLeft })}</span>}
             </div>
 
-            {graceInfo && phase === 'battle' && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
-                    <div className="cyber-panel p-8 md:p-12 flex flex-col items-center gap-4 text-center max-w-md w-full border-2 border-[#eab308] shadow-[0_0_30px_rgba(234,179,8,0.2)]">
-                        <h2 className="text-2xl md:text-3xl font-black tracking-tighter cyber-text-glow text-[#eab308] animate-pulse">
-                            SIGNAL LOST
-                        </h2>
-                        <p className="text-gray-300 text-sm tracking-widest">
-                            {(graceInfo.nick || 'OPPONENT').toUpperCase()} DISCONNECTED
-                        </p>
-                        <p className="text-gray-500 text-xs tracking-widest">
-                            WAITING FOR RECONNECTION... SHARE THE ROOM CODE SO THEY CAN REJOIN.
-                        </p>
-                        {roomCode && <CodeField code={roomCode} revealable textClassName="text-lg" />}
-                        <div className="text-5xl md:text-6xl font-black font-mono text-[#eab308] drop-shadow-[0_0_10px_rgba(234,179,8,0.6)]">
-                            {graceInfo.secondsLeft}s
-                        </div>
-                        <p className="text-gray-500 text-[10px] tracking-widest">
-                            VICTORY IS AWARDED IF THEY DON'T RETURN IN TIME
+            {phase === 'game_over' ? (
+                <section className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                        <h1 className={`m-0 font-hand text-[clamp(64px,9vw,112px)] leading-[1.1] font-bold underline decoration-pen decoration-wavy decoration-[3px] underline-offset-[16px] ${result === 'VICTORY' ? 'text-ink' : 'text-pen-dark'}`}>
+                            {result === 'VICTORY' ? t('gameOver.won') : t('gameOver.lost')}
+                        </h1>
+                        <p className="m-0 mt-4 max-w-[460px] text-lg text-[#4A4843]">
+                            {result === 'VICTORY' ? t('gameOver.wonSub', { nick: opponentName }) : t('gameOver.lostSub', { nick: opponentName })}
                         </p>
                     </div>
-                </div>
-            )}
-
-            {/* GAME OVER MODAL */}
-            {phase === 'game_over' && !showBoardAfterGame && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
-                    <div className={`cyber-panel relative p-8 md:p-12 flex flex-col items-center gap-6 text-center max-w-md w-full border-2 
-                        ${result === 'VICTORY' ? 'border-[#39ff14] shadow-[0_0_30px_rgba(57,255,20,0.2)]' : 'border-red-500 shadow-[0_0_30px_rgba(255,0,0,0.2)]'}
-                    `}>
+                    <div className="flex min-w-[260px] flex-col gap-3">
                         <button
-                            onClick={() => setShowBoardAfterGame(true)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-[#00f2ea] transition-colors text-xs font-bold tracking-widest flex items-center gap-1"
-                        >
-                            SHOW BOARD &#8594;
-                        </button>
-
-                        <h2 className={`text-5xl md:text-6xl font-black tracking-tighter cyber-text-glow ${result === 'VICTORY' ? 'text-[#39ff14]' : 'text-red-500'}`}>
-                            {result}
-                        </h2>
-                        <p className="text-gray-400 text-sm tracking-widest mb-4">
-                            {result === 'VICTORY' ? "MISSION ACCOMPLISHED." : "ALL SHIPS LOST."}
-                        </p>
-                        {playAgain === 'asked' && (
-                            <p className="-mb-4 text-[#39ff14] text-xs tracking-widest animate-pulse">
-                                OPPONENT WANTS TO PLAY AGAIN
-                            </p>
-                        )}
-                        <button
+                            type="button"
                             onClick={handlePlayAgain}
                             disabled={playAgainDisabled}
-                            className={`w-full py-3 border rounded text-sm font-bold tracking-widest transition-colors ${playAgainDisabled ? 'border-gray-700 text-gray-600 cursor-not-allowed' : playAgain === 'asked' ? 'border-[#39ff14] text-[#39ff14] shadow-[0_0_12px_rgba(57,255,20,0.35)] hover:bg-[#39ff14]/10' : 'border-[#00f2ea] text-[#00f2ea] hover:bg-[#00f2ea]/10'}`}
+                            className={`sketch-border min-h-14 px-7 text-lg font-extrabold text-white ${playAgainDisabled ? 'cursor-not-allowed border-disabled bg-disabled' : playAgain === 'asked' ? 'cursor-pointer border-pen bg-pen' : 'cursor-pointer border-ink bg-ink'}`}
                         >
                             {playAgainLabel}
                         </button>
-                        <button onClick={onLeave} className="cyber-button w-full text-lg py-4 hover:scale-105 transition-transform">
-                            LEAVE TO LOBBY
-                        </button>
+                        <span role="status" className="min-h-[26px] font-hand text-[22px] text-pencil">{playAgainHint}</span>
+                    </div>
+                </section>
+            ) : (
+                <h1 className="m-0 text-center font-hand text-[44px] leading-none font-bold text-ink">{title}</h1>
+            )}
+
+            {phase === 'battle' && (
+                <div data-slot="battle-status" role="status" className="flex min-h-[44px] items-center justify-center">
+                    {status && (
+                        <span className="-rotate-1 bg-white px-[18px] py-1 font-hand text-[26px] text-pen-dark shadow-[0_6px_16px_-10px_rgba(60,40,10,0.4)]">{status}</span>
+                    )}
+                </div>
+            )}
+
+            <main className="flex flex-wrap items-start justify-center gap-8" onContextMenu={handleContextMenu}>
+                {myBoardSection}
+                {(phase === 'battle' || phase === 'game_over') && radarSection}
+                {phase === 'battle' && fleetAside}
+                {phase === 'game_over' && legendAside}
+                {(phase === 'placement' || phase === 'waiting') && (phase === 'placement' ? shipyard : (
+                    <aside role="status" className="flex max-w-[360px] flex-[1_1_300px] items-center justify-center p-6 font-hand text-[28px] text-pencil">{t('deploy.waiting')}</aside>
+                ))}
+            </main>
+
+            {graceInfo && phase === 'battle' && (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-paper/85 px-4">
+                    <div role="alertdialog" aria-live="assertive" className="flex w-full max-w-md -rotate-1 flex-col items-center gap-4 bg-white p-8 text-center note-shadow">
+                        <p className="m-0 font-hand text-[30px] font-bold text-pen-dark">{t('battle.paused', { nick: graceInfo.nick || opponentName, s: graceInfo.secondsLeft })}</p>
+                        {roomCode && <CodeField code={roomCode} revealable size="sm" />}
                     </div>
                 </div>
             )}
-        </div>
+        </PaperLayout>
     );
 }
