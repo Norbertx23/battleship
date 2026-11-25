@@ -1,57 +1,41 @@
-"""Inicjalizacja schematu bazy - uruchamiana jako osobny krok przed startem API.
-
-Nie jest importowana przez main.py: aplikacja nie tworzy juz tabel przy starcie.
-Uruchamiana w compose jako serwis `init-db` (ten sam obraz co api), a api czeka
-na nia przez `condition: service_completed_successfully`.
-
-Kod wyjscia: 0 = sukces, 1 = blad (blokuje start api).
-"""
-
 import logging
 import sys
 
 from sqlalchemy import inspect, text
 
-import models  # noqa: F401
 from database import Base, engine
+from models import MatchHistory
+from logging_setup import setup_logging
 
 ADVISORY_LOCK_ID = 918273645
+TABLES = [MatchHistory.__table__]
 
-log = logging.getLogger("init_db")
+logger = logging.getLogger('init_db')
 
 
 def main() -> int:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
-
+    setup_logging()
     try:
         with engine.begin() as conn:
-            if conn.dialect.name == "postgresql":
-                log.info("Czekam na advisory lock %s...", ADVISORY_LOCK_ID)
-                conn.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"),
-                             {"lock_id": ADVISORY_LOCK_ID})
-                log.info("Advisory lock uzyskany.")
+            if conn.dialect.name == 'postgresql':
+                logger.info('Waiting for advisory lock %s', ADVISORY_LOCK_ID)
+                conn.execute(text('SELECT pg_advisory_xact_lock(:lock_id)'), {'lock_id': ADVISORY_LOCK_ID})
+                logger.info('Advisory lock acquired')
 
             before = set(inspect(conn).get_table_names())
-
-            Base.metadata.create_all(bind=conn)
-
+            Base.metadata.create_all(bind=conn, tables=TABLES)
             after = set(inspect(conn).get_table_names())
 
         created = sorted(after - before)
         if created:
-            log.info("Utworzono tabele (%d): %s", len(created), ", ".join(created))
+            logger.info('Created %d tables: %s', len(created), ', '.join(created))
         else:
-            log.info("Brak nowych tabel - schemat aktualny (%d istniejacych: %s).",
-                     len(after), ", ".join(sorted(after)))
+            logger.info('Schema up to date, %d existing tables: %s', len(after), ', '.join(sorted(after)))
         return 0
-
     except Exception:
-        log.exception("Inicjalizacja bazy nie powiodla sie.")
+        logger.exception('Database initialization failed')
         return 1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())
