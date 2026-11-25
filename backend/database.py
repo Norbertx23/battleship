@@ -1,23 +1,35 @@
 import os
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-load_dotenv()
-
 from urllib.parse import quote_plus
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-if not DATABASE_URL:
-    db_user = os.getenv("POSTGRES_USER")
-    db_password = os.getenv("POSTGRES_PASSWORD")
-    db_name = os.getenv("POSTGRES_DB")
-    db_host = os.getenv("DB_HOST", "localhost")
-    db_port = os.getenv("DB_PORT", "5432")
-    if not all([db_user, db_password, db_name]):
-        raise RuntimeError("Błąd: Brak wymaganych zmiennych POSTGRES_ w pliku .env!")
-    DATABASE_URL = f"postgresql://{quote_plus(db_user)}:{quote_plus(db_password)}@{db_host}:{db_port}/{db_name}"
+load_dotenv()
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine,autoflush=False,autocommit=False)
+
+def database_url():
+    url = os.getenv('DATABASE_URL')
+    if url:
+        return url
+    user = os.getenv('POSTGRES_USER')
+    password = os.getenv('POSTGRES_PASSWORD')
+    name = os.getenv('POSTGRES_DB')
+    host = os.getenv('DB_HOST', 'localhost')
+    port = os.getenv('DB_PORT', '5432')
+    if not all([user, password, name]):
+        raise RuntimeError('Missing database configuration: set DATABASE_URL or POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB.')
+    return f'postgresql://{quote_plus(user)}:{quote_plus(password)}@{host}:{port}/{name}'
+
+
+engine = create_engine(database_url())
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

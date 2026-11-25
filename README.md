@@ -250,7 +250,16 @@ Jeśli dodasz kolumnę do modelu, `init_db.py` przejdzie bez błędu, ale kolumn
 ## 📂 Struktura projektu
 
 ```
-backend/          FastAPI, Socket.IO, logika gry, modele
+backend/          API i serwer gry:
+  main.py           punkt wejścia ASGI (uvicorn main:app)
+  api.py            endpointy REST i limit zapytań do statystyk
+  sockets.py        zdarzenia Socket.IO i przebieg rozgrywki
+  room_state.py     pokoje w pamięci, kody, tokeny, powroty graczy
+  game_manager.py   zasady gry: walidacja floty, strzały, zwycięstwo
+  validation.py     walidacja nicków i fraz wyszukiwania
+  matches.py        zapis wyników do bazy
+  settings.py       stałe i konfiguracja ze zmiennych środowiskowych
+  logging_setup.py  konfiguracja logów (LOG_LEVEL)
 frontend/         React + Vite, interfejs gry
 desktop-client/   Electron — cienki klient
 deploy/           compose produkcyjny, skrypt wdrożeniowy, unit systemd

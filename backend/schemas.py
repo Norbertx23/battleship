@@ -1,27 +1,26 @@
-from pydantic import BaseModel
 from datetime import datetime
 
+from pydantic import BaseModel, ConfigDict
+
+
 class MatchResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     player1_nick: str
     player2_nick: str
     winner_nick: str
     played_at: datetime
 
-    class Config:
-        from_attributes = True
 
 class TopPlayer(BaseModel):
     nick: str
     wins: int
 
+
 class MatchListResponse(BaseModel):
     items: list[MatchResult]
     total: int
 
-class GameResultCreate(BaseModel):
-    player1_nick: str
-    player2_nick: str
-    winner_nick: str
 
 class PlayerStats(BaseModel):
     nick: str
