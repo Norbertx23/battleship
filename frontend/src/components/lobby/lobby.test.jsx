@@ -37,7 +37,22 @@ test('JoinForm przekazuje wpisany kod', async () => {
   const onCodeChange = vi.fn();
   renderJoin({ nick: 'K', onCodeChange });
   await userEvent.type(screen.getByLabelText('Room code'), 'a');
-  expect(onCodeChange).toHaveBeenCalledWith('a');
+  expect(onCodeChange).toHaveBeenCalledWith('A');
+});
+
+test('JoinForm wycina z kodu znaki spoza alfabetu', async () => {
+  const onCodeChange = vi.fn();
+  renderJoin({ nick: 'K', onCodeChange });
+  await userEvent.type(screen.getByLabelText('Room code'), '<');
+  expect(onCodeChange).toHaveBeenCalledWith('');
+});
+
+test('niepełny kod pokoju nie dołącza', async () => {
+  const onJoin = vi.fn();
+  renderJoin({ nick: 'Kraken', code: '7F3', onJoin });
+  await userEvent.click(screen.getByRole('button', { name: 'Join' }));
+  expect(onJoin).not.toHaveBeenCalled();
+  expect(screen.getByRole('alert')).toHaveTextContent('6 characters');
 });
 
 test('RecentGames ucina długie nicki w jednej linii i ma pełny title', () => {

@@ -1,7 +1,12 @@
 {
-  "name": "frontend",
+  "name": "battleship-web",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Battleship web client",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host",

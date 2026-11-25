@@ -66,8 +66,16 @@
     </div>
 
     <script>
-        const target = new URLSearchParams(window.location.search).get('url')
-            || 'https://battleship.swistak.fun/';
+        const DEFAULT_TARGET = 'https://battleship.swistak.fun/';
+        const requested = new URLSearchParams(window.location.search).get('url');
+        const isWebUrl = (value) => {
+            try {
+                return ['https:', 'http:'].includes(new URL(value).protocol);
+            } catch {
+                return false;
+            }
+        };
+        const target = isWebUrl(requested) ? requested : DEFAULT_TARGET;
         document.getElementById('target').textContent = target;
 
         function retry() {

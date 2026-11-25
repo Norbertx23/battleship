@@ -71,7 +71,8 @@ export default function MatchHistory() {
                     <label htmlFor="history-search" className="text-sm font-bold text-pencil">{t('history.find')}</label>
                     <input
                         id="history-search"
-                        type="text"
+                        type="search"
+                        maxLength={50}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder={t('history.findPh')}
