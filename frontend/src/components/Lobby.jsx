@@ -11,6 +11,8 @@ import RecentGames from './lobby/RecentGames';
 import CreateRoom from './create/CreateRoom';
 import RoomCode from './create/RoomCode';
 import GameBoard from './GameBoard';
+import { nickProblem } from '../utils/nick';
+import { fleetFits } from '../utils/fleet';
 
 const cardBase = 'sketch-border flex flex-[1_1_17rem] flex-col gap-1.5 px-6.5 py-5.5 no-underline transition-transform hover:-translate-y-0.5 hover:-rotate-1';
 
@@ -66,12 +68,17 @@ export default function Lobby() {
         window.scrollTo(0, 0);
     }, [view]);
 
-    const requireNick = (action) => {
-        if (!nick || !nick.trim()) {
-            notify({ code: 'nickname_required' });
+    const submitCreate = () => {
+        const problem = nickProblem(nick);
+        if (problem) {
+            notify({ code: problem });
             return;
         }
-        action();
+        if (!fleetFits(shipConfig)) {
+            notify({ code: 'invalid_fleet_config' });
+            return;
+        }
+        createRoom();
     };
 
     if (view === 'game') {
@@ -97,7 +104,7 @@ export default function Lobby() {
                 config={shipConfig}
                 onConfigChange={(masts, count) => setShipConfig((prev) => ({ ...prev, [masts]: count }))}
                 onBack={leaveRoom}
-                onCreate={() => requireNick(createRoom)}
+                onCreate={submitCreate}
             />
         );
     }

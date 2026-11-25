@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '../../i18n';
@@ -50,4 +50,21 @@ test('rozstawianie po polsku pokazuje tytuł i stocznię', async () => {
   );
   expect(screen.getByRole('heading', { name: 'Rozstaw statki' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Stocznia' })).toBeInTheDocument();
+});
+
+test('Delete usuwa tylko zaznaczony statek, także po dołożeniu nowego', () => {
+  const { container } = render(
+    <MemoryRouter>
+      <GameBoard socket={makeSocket()} roomCode="7F3K9Q" shipConfig={{ 1: 2 }} onLeave={() => {}} nick="Kraken" resumeState={{ phase: 'placement', my_ships: ONE_SHIP }} />
+    </MemoryRouter>,
+  );
+  const pointer = { button: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true };
+  const cells = () => container.querySelectorAll('[data-state]');
+  fireEvent.pointerDown(container.querySelector('.cursor-grab'), pointer);
+  fireEvent.pointerUp(cells()[55], pointer);
+  expect(container.querySelectorAll('[data-ship]')).toHaveLength(2);
+  fireEvent.pointerDown(container.querySelector('[data-ship]'), pointer);
+  fireEvent.pointerUp(cells()[0], pointer);
+  fireEvent.keyDown(window, { key: 'Delete' });
+  expect(container.querySelectorAll('[data-ship]')).toHaveLength(1);
 });

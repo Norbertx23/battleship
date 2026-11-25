@@ -2,6 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import { useNotice } from '../../notice/useNotice';
 import Consent from './Consent';
+import { nickProblem } from '../../utils/nick';
+
+const ROOM_CODE_LENGTH = 6;
+const cleanCode = (value) => value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_CODE_LENGTH);
 
 const inputClass = 'h-12 w-full border-0 border-b-2 border-ink-dark bg-transparent px-1 font-hand text-3xl text-ink outline-none placeholder:text-placeholder focus:border-pen';
 
@@ -11,8 +15,13 @@ export default function JoinForm({ nick, onNickChange, code, onCodeChange, onJoi
 
   const submit = (e) => {
     e.preventDefault();
-    if (!nick || !nick.trim()) {
-      notify({ code: 'nickname_required' });
+    const problem = nickProblem(nick);
+    if (problem) {
+      notify({ code: problem });
+      return;
+    }
+    if (code.trim().length !== ROOM_CODE_LENGTH) {
+      notify({ code: 'room_code_invalid' });
       return;
     }
     onJoin();
@@ -27,11 +36,11 @@ export default function JoinForm({ nick, onNickChange, code, onCodeChange, onJoi
       </div>
       <div className="flex flex-[1_1_11.25rem] flex-col gap-0.5">
         <label htmlFor="join-nick" className="text-sm font-bold text-pencil">{t('lobby.yourName')}</label>
-        <input id="join-nick" type="text" maxLength={30} value={nick} onChange={(e) => onNickChange(e.target.value)} placeholder={t('lobby.namePh')} className={`${inputClass} tracking-[0.02em]`} />
+        <input id="join-nick" type="text" maxLength={30} autoComplete="nickname" value={nick} onChange={(e) => onNickChange(e.target.value)} placeholder={t('lobby.namePh')} className={`${inputClass} tracking-[0.02em]`} />
       </div>
       <div className="flex flex-[1_1_10rem] flex-col gap-0.5">
         <label htmlFor="join-code" className="text-sm font-bold text-pencil">{t('lobby.roomCode')}</label>
-        <input id="join-code" type="text" value={code} onChange={(e) => onCodeChange(e.target.value)} placeholder="7F3K9Q" className={`${inputClass} uppercase tracking-[0.12em]`} />
+        <input id="join-code" type="text" maxLength={ROOM_CODE_LENGTH} autoComplete="off" autoCapitalize="characters" spellCheck={false} value={code} onChange={(e) => onCodeChange(cleanCode(e.target.value))} placeholder="7F3K9Q" className={`${inputClass} uppercase tracking-[0.12em]`} />
       </div>
       <button type="submit" className="sketch-border whitespace-nowrap inline-flex min-h-12 cursor-pointer items-center gap-2 border-pen bg-pen px-6 text-lg font-extrabold text-white transition-transform hover:-translate-y-0.5 hover:-rotate-1">
         <LogIn size={20} aria-hidden="true" />{t('lobby.join')}

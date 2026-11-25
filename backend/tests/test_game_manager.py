@@ -107,3 +107,14 @@ class TestResetRoomState:
     def test_strzaly_puste_dla_kazdego_gracza(self):
         room = gm.reset_room_state(finished_room())
         assert room["shots"] == {"sid_a": [], "sid_b": []}
+
+
+def test_flota_niemieszczaca_sie_na_planszy_jest_odrzucana():
+    assert gm.validate_config({'1': 4, '2': 3, '3': 2, '4': 1})
+    assert not gm.validate_config({'1': 5, '2': 5, '3': 5, '4': 5})
+    assert not gm.validate_config({'2': 5, '3': 5, '4': 5})
+
+
+def test_normalize_fleet_zostawia_tylko_znane_pola():
+    ships = [{'size': 2, 'x': 1, 'y': 2, 'vertical': True, 'extra': 'x' * 1000}]
+    assert gm.normalize_fleet(ships) == [{'size': 2, 'x': 1, 'y': 2, 'vertical': True}]

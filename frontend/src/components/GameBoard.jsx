@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, RotateCw, Trash2, X } from 'lucide-react';
 import CodeField from './CodeField';
@@ -80,6 +80,8 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
     const dragPointerIdRef = useRef(null);
     const dragPointerTypeRef = useRef(null);
     const opponentHitTimerRef = useRef(null);
+    const nextShipIdRef = useRef(0);
+    const onLeaveRef = useRef(onLeave);
 
     useEffect(() => { draggedShipRef.current = draggedShip; }, [draggedShip]);
     useEffect(() => { dragOverIndexRef.current = dragOverIndex; }, [dragOverIndex]);
@@ -87,6 +89,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
     useEffect(() => { myShipsRef.current = myShips; }, [myShips]);
     useEffect(() => { globalRotationRef.current = globalRotation; }, [globalRotation]);
     useEffect(() => { phaseRef.current = phase; }, [phase]);
+    useEffect(() => { onLeaveRef.current = onLeave; }, [onLeave]);
 
     const shipCategories = Object.entries(shipConfig)
         .map(([size, count]) => ({ size: parseInt(size), maxCount: count }))
@@ -96,48 +99,15 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
         return myShips.filter(s => s.size === size).length === maxCount;
     });
 
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'r' || e.key === 'R') {
-                handleRotateRef();
-            }
-            if (e.key === 'Backspace' || e.key === 'Delete') {
-                handleDeleteRef();
-            }
-        };
-
-        const handleGlobalPointerUp = () => {
-            if (draggedShipRef.current && dragOverIndexRef.current === null) {
-                setDraggedShip(null);
-            }
-        };
-
-        const handleGlobalPointerDown = (e) => {
-            if (draggedShipRef.current) {
-                handleRotateRef();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('pointerup', handleGlobalPointerUp);
-        window.addEventListener('pointerdown', handleGlobalPointerDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('pointerup', handleGlobalPointerUp);
-            window.removeEventListener('pointerdown', handleGlobalPointerDown);
-        };
+    const removeShip = useCallback((shipId) => {
+        if (phaseRef.current !== 'placement') return;
+        setMyShips(prev => prev.filter(s => s.id !== shipId));
+        setSelectedShipId(null);
     }, []);
 
-    const handleDeleteRef = () => {
-        if (selectedShipIdRef.current) {
-            handleRemoveShip(selectedShipIdRef.current);
-        }
-    };
-
-    const handleRotateRef = () => {
+    const rotateShip = useCallback(() => {
         const currentDragged = draggedShipRef.current;
         const currentSelected = selectedShipIdRef.current;
-        const currentShips = myShipsRef.current;
 
         if (currentDragged) {
             setDraggedShip(prev => ({ ...prev, rotation: prev.rotation + 90 }));
@@ -150,12 +120,40 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
             return;
         }
 
-        const ship = currentShips.find(s => s.id === currentSelected);
-        if (!ship) return;
+        setMyShips(prev => prev.map(s => s.id === currentSelected ? { ...s, rotation: s.rotation + 90 } : s));
+    }, []);
 
-        const newRotation = ship.rotation + 90;
-        setMyShips(prev => prev.map(s => s.id === ship.id ? { ...s, rotation: newRotation } : s));
-    };
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                rotateShip();
+            }
+            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedShipIdRef.current) {
+                removeShip(selectedShipIdRef.current);
+            }
+        };
+
+        const handleGlobalPointerUp = () => {
+            if (draggedShipRef.current && dragOverIndexRef.current === null) {
+                setDraggedShip(null);
+            }
+        };
+
+        const handleGlobalPointerDown = () => {
+            if (draggedShipRef.current) {
+                rotateShip();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('pointerup', handleGlobalPointerUp);
+        window.addEventListener('pointerdown', handleGlobalPointerDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('pointerup', handleGlobalPointerUp);
+            window.removeEventListener('pointerdown', handleGlobalPointerDown);
+        };
+    }, [rotateShip, removeShip]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -167,7 +165,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
             setIsMyTurn(data.turn === socket.id);
         });
         socket.on('shot_result', (data) => {
-            const { x, y, result, shooter, next_turn, sunk_sizes } = data;
+            const { x, y, result, shooter, next_turn } = data;
             const index = y * BOARD_SIZE + x;
             if (shooter === socket.id) {
                 setEnemyBoard(prev => { const newBoard = [...prev]; newBoard[index] = result; return newBoard; });
@@ -214,12 +212,12 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
             if (data.forfeit) {
                 setTimeout(() => {
                     notify({ ...data, tone: 'info' });
-                    if (onLeave) onLeave();
+                    if (onLeaveRef.current) onLeaveRef.current();
                 }, 100);
             } else if (!data.silent) {
                 setTimeout(() => {
                     notify(data);
-                    if (onLeave) onLeave();
+                    if (onLeaveRef.current) onLeaveRef.current();
                 }, 100);
             }
         };
@@ -346,7 +344,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
                 setMyShips(prev => prev.map(s => s.id === id ? newShip : s));
                 setSelectedShipId(id);
             } else {
-                const newId = `ship-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                const newId = `ship-${nextShipIdRef.current++}`;
                 const newShip = { x, y, size, rotation: placementRotation, id: newId };
                 setMyShips(prev => [...prev, newShip]);
                 setSelectedShipId(newId);
@@ -361,7 +359,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
 
     const handleContextMenu = (e) => {
         e.preventDefault();
-        if (phase === 'placement') handleRotateRef();
+        if (phase === 'placement') rotateShip();
     };
 
     const handleMarkRadar = (e, index) => {
@@ -377,13 +375,6 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
         });
     };
 
-    const handleRotate = () => { handleRotateRef(); };
-
-    const handleRemoveShip = (shipId) => {
-        if (phase !== 'placement') return;
-        setMyShips(myShips.filter(s => s.id !== shipId));
-        setSelectedShipId(null);
-    };
 
     const handleConfirmPlacement = () => {
         const shipsForBackend = myShips.map(s => {
@@ -424,13 +415,13 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
     };
 
     const handleRadarClick = (e, index) => {
-        if (Date.now() - twoFingerAtRef.current < 600) return;
+        if (e.timeStamp - twoFingerAtRef.current < 600) return;
         handleFireOrMark(e, index);
     };
 
     const handleRadarTouch = (e, index) => {
         if (e.touches && e.touches.length === 2) {
-            twoFingerAtRef.current = Date.now();
+            twoFingerAtRef.current = e.timeStamp;
             handleMarkRadar(e, index);
         }
     };
@@ -586,7 +577,7 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
                 )}
             </div>
             <div data-slot="board-width" className={BOARD_WIDTH}>
-                <BoardFrame label={t('battle.theirSea')}>
+                <BoardFrame label={t('battle.theirSea')} boardProps={{ className: 'touch-pan-x touch-pan-y' }}>
                     {enemyBoard.map((_, i) => {
                         const kind = enemyCellKind(i);
                         if (phase === 'game_over') return <div key={i} data-state={kind} className={cellClasses(kind)} />;
@@ -665,10 +656,10 @@ export default function Battle({ socket, roomCode, shipConfig, onLeave, nick, op
                     );
                 })}
                 <div className="mt-2 flex flex-wrap gap-2.5">
-                    <button type="button" onClick={handleRotate} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-ink-dark bg-white text-base font-extrabold text-ink-dark">
+                    <button type="button" onClick={rotateShip} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-ink-dark bg-white text-base font-extrabold text-ink-dark">
                         <RotateCw size={18} aria-hidden="true" />{globalRotation % 180 === 0 ? t('deploy.rotH') : t('deploy.rotV')}
                     </button>
-                    <button type="button" onClick={() => selectedShipId && handleRemoveShip(selectedShipId)} disabled={!selectedShipId} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-base font-extrabold text-pen-dark disabled:cursor-not-allowed disabled:opacity-40">
+                    <button type="button" onClick={() => selectedShipId && removeShip(selectedShipId)} disabled={!selectedShipId} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-base font-extrabold text-pen-dark disabled:cursor-not-allowed disabled:opacity-40">
                         <X size={18} aria-hidden="true" />{t('deploy.remove')}
                     </button>
                     <button type="button" onClick={handleClearBoard} className="sketch-border whitespace-nowrap inline-flex min-h-11 flex-[1_1_7.5rem] cursor-pointer items-center justify-center gap-2 border-pen-dark bg-white text-base font-extrabold text-pen-dark">

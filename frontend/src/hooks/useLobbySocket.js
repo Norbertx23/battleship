@@ -3,6 +3,7 @@ import useSocket from './useSocket';
 import { useLocalStorage } from './useLocalStorage';
 import { useNotice } from '../notice/useNotice';
 import { pickOpponent } from '../utils/pickOpponent';
+import { normalizeNick } from '../utils/nick';
 
 export default function useLobbySocket() {
     const socket = useSocket();
@@ -41,12 +42,10 @@ export default function useLobbySocket() {
             }
         };
         const handleRoomCreated = (data) => {
-            console.log('Room Created Event Received:', data);
             setRoomCode(data.room_id);
             setView('room_created');
         };
         const handleGameStart = (data) => {
-            console.log('GAME STARTED! Config:', data.config);
             setResumeState(null);
             setShipConfig(data.config);
             setOpponent(pickOpponent(data.players, nickRef.current));
@@ -54,7 +53,6 @@ export default function useLobbySocket() {
             setView('game');
         };
         const handleGameResumed = (data) => {
-            console.log('GAME RESUMED!', data);
             setShipConfig(data.config);
             setRoomCode(data.room_id);
             setGameCode(data.room_id);
@@ -74,8 +72,7 @@ export default function useLobbySocket() {
             if (viewRef.current === 'menu' || !activeRoom) return;
             const token = sessionStorage.getItem('bs_token_' + activeRoom);
             if (!token) return;
-            console.log('Reconnected - rejoining room', activeRoom);
-            socket.emit('join_room', { room_id: activeRoom, nick: nickRef.current, config: {}, token, rejoin: true });
+            socket.emit('join_room', { room_id: activeRoom, nick: normalizeNick(nickRef.current), token, rejoin: true });
         };
         const handleRejoinFailed = (data) => {
             const activeRoom = activeRoomRef.current;
@@ -117,15 +114,14 @@ export default function useLobbySocket() {
     }, [socket, setNick, notify]);
 
     const createRoom = useCallback(() => {
-        console.log('Creating room with ship config:', shipConfig);
-        socket.emit('create_room', { nick, config: shipConfig });
+        socket.emit('create_room', { nick: normalizeNick(nick), config: shipConfig });
     }, [socket, nick, shipConfig]);
 
     const joinRoom = useCallback(() => {
         const code = gameCode.trim().toUpperCase();
         setGameCode(code);
         const token = sessionStorage.getItem('bs_token_' + code) || undefined;
-        socket.emit('join_room', { room_id: code, nick, config: {}, token });
+        socket.emit('join_room', { room_id: code, nick: normalizeNick(nick), token });
     }, [socket, gameCode, nick]);
 
     const leaveRoom = useCallback(() => {

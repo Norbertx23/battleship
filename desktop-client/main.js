@@ -1,8 +1,28 @@
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const DEFAULT_URL = 'https://battleship.swistak.fun/';
 const GAME_URL = process.env.BATTLESHIP_URL || DEFAULT_URL;
+const GAME_ORIGIN = new URL(GAME_URL).origin;
+const OFFLINE_PAGE = path.join(__dirname, 'offline.html');
+const OFFLINE_URL = pathToFileURL(OFFLINE_PAGE).href;
+
+function isWebUrl(url) {
+    try {
+        return ['https:', 'http:'].includes(new URL(url).protocol);
+    } catch {
+        return false;
+    }
+}
+
+function isGameUrl(url) {
+    try {
+        return new URL(url).origin === GAME_ORIGIN;
+    } catch {
+        return false;
+    }
+}
 
 let mainWindow;
 
@@ -17,13 +37,15 @@ function createWindow() {
         backgroundColor: '#0a0a12',
         webPreferences: {
             nodeIntegration: false,
-            contextIsolation: true
+            contextIsolation: true,
+            sandbox: true,
+            webSecurity: true
         },
         autoHideMenuBar: true
     });
 
     mainWindow.loadURL(GAME_URL).catch((err) => {
-        console.error('Nie udalo sie zaladowac', GAME_URL, err);
+        console.error('Failed to load', GAME_URL, err);
         showOffline();
     });
 
@@ -34,19 +56,25 @@ function createWindow() {
     });
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url);
+        if (isWebUrl(url)) shell.openExternal(url);
         return { action: 'deny' };
+    });
+
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+        if (isGameUrl(url) || url.startsWith(OFFLINE_URL)) return;
+        event.preventDefault();
+        if (isWebUrl(url)) shell.openExternal(url);
     });
 }
 
 function showOffline() {
-    mainWindow.loadFile(path.join(__dirname, 'offline.html'), {
+    mainWindow.loadFile(OFFLINE_PAGE, {
         query: { url: GAME_URL }
     });
 }
 
 app.whenReady().then(() => {
-    console.log('Laczenie z:', GAME_URL);
+    console.log('Connecting to', GAME_URL);
     createWindow();
 
     app.on('activate', () => {

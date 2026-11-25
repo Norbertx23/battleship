@@ -3,9 +3,11 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-import main
+import api
+from helpers import events
 from rate_limit import RateLimiter, client_ip
-from test_reconnect import events, fake_sio  # noqa: F401
+import settings
+import sockets
 
 
 class FakeClock:
@@ -47,17 +49,17 @@ def test_client_ip_preferuje_naglowek_cloudflare():
 
 @pytest.fixture
 def fresh_limits():
-    main.stats_limiter.reset()
-    main.room_limiter.reset()
+    api.stats_limiter.reset()
+    sockets.room_limiter.reset()
     yield
-    main.stats_limiter.reset()
-    main.room_limiter.reset()
+    api.stats_limiter.reset()
+    sockets.room_limiter.reset()
 
 
 def test_statystyki_po_przekroczeniu_limitu_zwracaja_429_z_kodem(fresh_limits):
-    client = TestClient(main.fastapi_app)
+    client = TestClient(api.fastapi_app)
     headers = {'cf-connecting-ip': '9.9.9.9'}
-    for _ in range(main.STATS_LIMIT):
+    for _ in range(settings.STATS_LIMIT):
         assert client.get('/stats/top-players', headers=headers).status_code == 200
     res = client.get('/stats/top-players', headers=headers)
     assert res.status_code == 429
@@ -67,20 +69,20 @@ def test_statystyki_po_przekroczeniu_limitu_zwracaja_429_z_kodem(fresh_limits):
 
 
 def test_healthz_nie_jest_limitowany(fresh_limits):
-    client = TestClient(main.fastapi_app)
-    for _ in range(main.STATS_LIMIT + 5):
+    client = TestClient(api.fastapi_app)
+    for _ in range(settings.STATS_LIMIT + 5):
         assert client.get('/healthz').status_code == 200
 
 
 def test_zbyt_wiele_pokoi_z_jednego_ip_daje_kod_rate_limited(fake_sio, fresh_limits):
     async def scenario():
-        for i in range(main.ROOM_LIMIT + 1):
+        for i in range(settings.ROOM_LIMIT + 1):
             sid = f's{i}'
-            await main.connect(sid, {'HTTP_CF_CONNECTING_IP': '7.7.7.7', 'REMOTE_ADDR': '10.0.0.1'})
-            await main.create_room(sid, {'nick': 'Host', 'config': {'1': 1}})
-        last = f's{main.ROOM_LIMIT}'
+            await sockets.connect(sid, {'HTTP_CF_CONNECTING_IP': '7.7.7.7', 'REMOTE_ADDR': '10.0.0.1'})
+            await sockets.create_room(sid, {'nick': 'Host', 'config': {'1': 1}})
+        last = f's{settings.ROOM_LIMIT}'
         err = events(fake_sio, 'error', to=last)
         assert err and err[0]['data']['code'] == 'rate_limited'
-        assert len(events(fake_sio, 'session')) == main.ROOM_LIMIT
+        assert len(events(fake_sio, 'session')) == settings.ROOM_LIMIT
 
     asyncio.run(scenario())

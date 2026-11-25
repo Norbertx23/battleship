@@ -33,6 +33,7 @@ export default function CreateRoom({ nick, onNickChange, config, onConfigChange,
               id="create-nick"
               type="text"
               maxLength={30}
+              autoComplete="nickname"
               value={nick}
               onChange={(e) => onNickChange(e.target.value)}
               placeholder={t('lobby.namePh')}

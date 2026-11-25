@@ -2,7 +2,6 @@ name: Release (GHCR)
 
 # Buduje obrazy na runnerach GitHuba i publikuje je do GHCR.
 # Serwer sam pobiera obrazy (model pull) - nie ma tu joba deployującego.
-# Stary ci-cd.yml celowo zostaje nietknięty do czasu przełączenia.
 
 on:
   push:
@@ -11,7 +10,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Domyslnie tylko odczyt; job publish podnosi sobie uprawnienia lokalnie.
+# Domyślnie tylko odczyt; job publish podnosi sobie uprawnienia lokalnie.
 permissions:
   contents: read
 
@@ -56,7 +55,7 @@ jobs:
         run: pytest -v
 
   build-frontend:
-    name: Build frontendu (bramka)
+    name: Lint, testy i build frontendu (bramka)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -65,11 +64,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Instalacja zależności
         run: npm ci
+      - name: Lint (ESLint)
+        run: npm run lint
+      - name: Testy (Vitest)
+        run: npm test
       - name: Build produkcyjny
         run: npm run build
 

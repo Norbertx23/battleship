@@ -1,7 +1,6 @@
-fastapi
-uvicorn
-sqlalchemy>=2.1
-psycopg[binary]
-python-socketio
-python-dotenv
-
+fastapi==0.128.5
+uvicorn==0.40.0
+SQLAlchemy==2.1.5
+psycopg[binary]==3.3.6
+python-socketio==5.16.1
+python-dotenv==1.2.1
